@@ -4,7 +4,11 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDrawArrays, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl
+        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
+        glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDrawArrays,
+        glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetProgramiv,
+        glGetShaderInfoLog, glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram,
+        glVertexAttribPointer, load_global_gl,
     },
     *,
 };
@@ -94,110 +98,38 @@ fn main() {
             3,                                            // Number of components in the attribute
             GL_FLOAT, // Element type of the data in the attribute
             0,        // normalized
-            mem::size_of::<Vertex>().try_into().unwrap(), // Size in bytes of the data type, 3 * 4 bytes
+            mem::size_of::<Vertex>().try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
             0 as *const _, // Start of the vertext attribute within the buffer
         );
         glEnableVertexAttribArray(0);
     }
 
-    let vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    assert_ne!(vertex_shader, 0);
-
     const VERT_SHADER: &str = r#"#version 330 core
-        layout (location = 0) in vec3 pos;
+        layout (location = 0) in vec4 pos;
         void main() {
-            gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
+            //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
+            gl_Position = pos;
         }
     "#;
-
-    unsafe {
-        glShaderSource(
-            vertex_shader,
-            1,
-            &(VERT_SHADER.as_bytes().as_ptr().cast()),
-            &(VERT_SHADER.len().try_into().unwrap()),
-        );
-    }
-    glCompileShader(vertex_shader);
-
-    // Check for compilation error
-    unsafe {
-        let mut success = 0;
-        glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &mut success);
-
-        if success == 0 {
-            let mut v: Vec<u8> = Vec::with_capacity(1024); // We assume msg is less than 1024 bytes
-            let mut log_len = 0i32;
-            glGetShaderInfoLog(vertex_shader, 1024, &mut log_len, v.as_mut_ptr().cast());
-            
-            assert!(v.capacity() >= log_len as usize);
-            v.set_len(log_len.try_into().unwrap());
-            
-            panic!("Vertex Compile Error: {}", String::from_utf8_lossy(&v));
-        }
-    }
-
-    // Creating the fragment shader
-    let fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    assert_ne!(fragment_shader, 0);
 
     const FRAG_SHADER: &str = r#"#version 330 core
-        out vec4 final_color;
+    out vec4 final_color;
 
-        void main() {
-            final_color = vec4(1.0, 0.5, 0.2, 1.0);
-        }
+    void main() {
+        final_color = vec4(1.0, 0.5, 0.2, 1.0);
+    }
     "#;
 
-    unsafe {
-        glShaderSource(fragment_shader, 1, &(FRAG_SHADER.as_bytes().as_ptr().cast()), &(FRAG_SHADER.len().try_into().unwrap()));
-    }
-    glCompileShader(fragment_shader);
+    let vertex_shader_id = create_shader(GL_VERTEX_SHADER, VERT_SHADER);
+    let fragment_shader_id = create_shader(GL_FRAGMENT_SHADER, FRAG_SHADER);
 
-    unsafe {
-        let mut success = 0;
-        glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &mut success);
-
-        if success == 0 {
-            let mut v: Vec<u8> = Vec::with_capacity(1024);
-            let mut log_len = 0i32;
-            glGetShaderInfoLog(fragment_shader, 1024, &mut log_len, v.as_mut_ptr().cast());
-
-            assert!(v.capacity() >= log_len as usize);
-            v.set_len(log_len.try_into().unwrap());
-
-            panic!("Fragment Compile Error: {}", String::from_utf8_lossy(&v));
-        }
-    }
-
-    // Program combines several shader stages and creates a complete graphics pipeline
-    let shader_program = glCreateProgram();
-    glAttachShader(shader_program, vertex_shader);
-    glAttachShader(shader_program, fragment_shader);
-    glLinkProgram(shader_program);
-
-    unsafe {
-        let mut success = 0;
-        glGetProgramiv(shader_program, GL_LINK_STATUS, &mut success);
-
-        if success == 0 {
-            let mut v: Vec<u8> = Vec::with_capacity(1024);
-            let mut log_len = 0i32;
-            glGetShaderInfoLog(shader_program, 1024, &mut log_len, v.as_mut_ptr().cast());
-
-            assert!(v.capacity() >= log_len as usize);
-            v.set_len(log_len.try_into().unwrap());
-
-            panic!("Shader Program Link Error: {}", String::from_utf8_lossy(&v));
-        }
-    }
+    let shader_program_id = create_program(vertex_shader_id, fragment_shader_id);
 
     // They get deleted after we unattach them from the defined program
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
+    glDeleteShader(vertex_shader_id);
+    glDeleteShader(fragment_shader_id);
 
-    glUseProgram(shader_program);
-
+    glUseProgram(shader_program_id);
 
     // Enable vsync - swap_window blocks until the image has been presented to the user
     // So we show images at most as fast the display's refresh rate
@@ -220,6 +152,75 @@ fn main() {
             glClear(GL_COLOR_BUFFER_BIT);
             glDrawArrays(GL_TRIANGLES, 0, 3);
             win.swap_window();
+        }
+    }
+}
+
+fn create_program(vertex_shader_id: u32, fragment_shader_id: u32) -> u32 {
+    let program_id = glCreateProgram();
+    assert_ne!(program_id, 0);
+
+    // Program combines several shader stages and creates a complete graphics pipeline
+    glAttachShader(program_id, vertex_shader_id);
+    glAttachShader(program_id, fragment_shader_id);
+    glLinkProgram(program_id);
+
+    log_error(program_id, false);
+
+    program_id
+}
+
+fn create_shader(shader_type: GLenum, source_code: &str) -> u32 {
+    let shader_id: u32 = glCreateShader(shader_type);
+    assert_ne!(shader_id, 0);
+
+    unsafe {
+        glShaderSource(
+            shader_id,
+            1,
+            &(source_code.as_bytes().as_ptr().cast()),
+            &(source_code.len().try_into().unwrap()),
+        );
+    }
+
+    glCompileShader(shader_id);
+
+    log_error(shader_id, true);
+
+    shader_id
+}
+
+fn log_error(object_id: u32, is_shader: bool) -> () {
+    let mut success = 0;
+
+    unsafe {
+        if is_shader {
+            glGetShaderiv(object_id, GL_COMPILE_STATUS, &mut success);
+        } else {
+            glGetProgramiv(object_id, GL_LINK_STATUS, &mut success);
+        }
+
+        if success == 0 {
+            let mut log_len = 0i32;
+            glGetShaderiv(object_id, GL_INFO_LOG_LENGTH, &mut log_len);
+            let mut log_message: Vec<u8> = Vec::with_capacity(log_len as usize);
+
+            glGetShaderInfoLog(
+                object_id,
+                log_message.capacity() as i32,
+                &mut log_len,
+                log_message.as_mut_ptr().cast(),
+            );
+            log_message.set_len(log_len.try_into().unwrap());
+
+            if is_shader {
+                glDeleteShader(object_id);
+            }
+
+            panic!(
+                "Shader Program Link Error: {}",
+                String::from_utf8_lossy(&log_message)
+            );
         }
     }
 }
