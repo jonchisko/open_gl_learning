@@ -4,17 +4,16 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
-        glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDrawArrays,
-        glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetProgramiv,
-        glGetShaderInfoLog, glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram,
-        glVertexAttribPointer, load_global_gl,
+        glClear, glDrawArrays, glDrawElements, glEnableVertexAttribArray, glPolygonMode, glVertexAttribPointer, load_global_gl
     },
     *,
 };
+use opengl_chrno::learn_opengl::{self as learn, Buffer, BufferType, ShaderProgram, VertexArray};
+
 use std::mem;
 
 type Vertex = [f32; 3];
+type TriIndices = [u32; 3];
 
 fn main() {
     // Specify you will be using open GL before creating the window
@@ -50,47 +49,28 @@ fn main() {
     unsafe {
         load_global_gl(&|f_name| win.get_proc_address(f_name));
     }
-    // Clear the buffer with the following color
-    unsafe {
-        glClearColor(0.2, 0.3, 0.3, 1.0);
-    }
 
-    let mut vao = 0; // Pointer to the generated vertex array
-    unsafe {
-        glGenVertexArrays(1, &mut vao);
-        assert_ne!(vao, 0); // If zero was returned -> error
-    }
-    // with glBindVertexArray we would make the "vao" (vertex array object) as the active VAO
-    // This is context wide effect and all functions now operate on this vao
-    glBindVertexArray(vao);
+    learn::clear_color(0.2, 0.3, 0.3, 1.0);
 
-    // VBO, vertex buffer object
-    let mut vbo = 0;
-    unsafe {
-        glGenBuffers(1, &mut vbo);
-        assert_ne!(vbo, 0);
-    }
-
-    // Binding to the binding target
-    unsafe {
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    }
+    let vao = VertexArray::new().expect("Could not make a VAO");
+    vao.bind();
 
     // Triangle in Normalized Device Context (NDC).
-    const VERTICES: [Vertex; 3] = [[-0.5, -0.5, 0.0], [0.5, -0.5, 0.0], [0.0, 0.5, 0.0]];
-    // We operate on GL_ARRAY_BUFFER, the vbo we bound above
-    // we need the size of the vertices, which is 3 (vertices) * 3 (floats) * 4 bytes (size of f32) = 36 bytes
-    // Void ptr to the data
-    // Hint on how we use the data so GPU/CPU can use the faster/slower mem. Static -> sending the data
-    // once with multiple redraws
-    unsafe {
-        glBufferData(
-            GL_ARRAY_BUFFER,
-            mem::size_of_val(&VERTICES) as isize,
-            VERTICES.as_ptr().cast(),
-            GL_STATIC_DRAW,
-        );
-    }
+    const VERTICES: [Vertex; 4] = [[0.5, 0.5, 0.0], [0.5, -0.5, 0.0], [-0.5, -0.5, 0.0], [-0.5, 0.5, 0.0]];
+    const INDICES: [TriIndices; 2] = [[0, 1, 3], [1, 2, 3]];
+
+    let vbo = Buffer::new().expect("Could not make a VBO");
+    vbo.bind(BufferType::Array);
+    learn::buffer_data(
+        BufferType::Array,
+        bytemuck::cast_slice(&VERTICES),
+        GL_STATIC_DRAW,
+    );
+
+    let ebo = Buffer::new().expect("Could not make the element buffer");
+    ebo.bind(BufferType::ElementArray);
+    learn::buffer_data(BufferType::ElementArray, bytemuck::cast_slice(&INDICES), GL_STATIC_DRAW);
+
 
     unsafe {
         glVertexAttribPointer(
@@ -113,27 +93,24 @@ fn main() {
     "#;
 
     const FRAG_SHADER: &str = r#"#version 330 core
-    out vec4 final_color;
+        out vec4 final_color;
 
-    void main() {
-        final_color = vec4(1.0, 0.5, 0.2, 1.0);
-    }
+        void main() {
+            final_color = vec4(1.0, 0.5, 0.2, 1.0);
+        }
     "#;
 
-    let vertex_shader_id = create_shader(GL_VERTEX_SHADER, VERT_SHADER);
-    let fragment_shader_id = create_shader(GL_FRAGMENT_SHADER, FRAG_SHADER);
-
-    let shader_program_id = create_program(vertex_shader_id, fragment_shader_id);
-
-    // They get deleted after we unattach them from the defined program
-    glDeleteShader(vertex_shader_id);
-    glDeleteShader(fragment_shader_id);
-
-    glUseProgram(shader_program_id);
+    let shader_program = ShaderProgram::from_vert_frag(VERT_SHADER, FRAG_SHADER).unwrap();
+    shader_program.use_program();
 
     // Enable vsync - swap_window blocks until the image has been presented to the user
     // So we show images at most as fast the display's refresh rate
     let _ = win.set_swap_interval(video::GlSwapInterval::Vsync);
+
+    // Wireframe mode
+    unsafe {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
 
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
@@ -150,77 +127,9 @@ fn main() {
 
         unsafe {
             glClear(GL_COLOR_BUFFER_BIT);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
+            //glDrawArrays(GL_TRIANGLES, 0, 3);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 as *const _);
             win.swap_window();
-        }
-    }
-}
-
-fn create_program(vertex_shader_id: u32, fragment_shader_id: u32) -> u32 {
-    let program_id = glCreateProgram();
-    assert_ne!(program_id, 0);
-
-    // Program combines several shader stages and creates a complete graphics pipeline
-    glAttachShader(program_id, vertex_shader_id);
-    glAttachShader(program_id, fragment_shader_id);
-    glLinkProgram(program_id);
-
-    log_error(program_id, false);
-
-    program_id
-}
-
-fn create_shader(shader_type: GLenum, source_code: &str) -> u32 {
-    let shader_id: u32 = glCreateShader(shader_type);
-    assert_ne!(shader_id, 0);
-
-    unsafe {
-        glShaderSource(
-            shader_id,
-            1,
-            &(source_code.as_bytes().as_ptr().cast()),
-            &(source_code.len().try_into().unwrap()),
-        );
-    }
-
-    glCompileShader(shader_id);
-
-    log_error(shader_id, true);
-
-    shader_id
-}
-
-fn log_error(object_id: u32, is_shader: bool) -> () {
-    let mut success = 0;
-
-    unsafe {
-        if is_shader {
-            glGetShaderiv(object_id, GL_COMPILE_STATUS, &mut success);
-        } else {
-            glGetProgramiv(object_id, GL_LINK_STATUS, &mut success);
-        }
-
-        if success == 0 {
-            let mut log_len = 0i32;
-            glGetShaderiv(object_id, GL_INFO_LOG_LENGTH, &mut log_len);
-            let mut log_message: Vec<u8> = Vec::with_capacity(log_len as usize);
-
-            glGetShaderInfoLog(
-                object_id,
-                log_message.capacity() as i32,
-                &mut log_len,
-                log_message.as_mut_ptr().cast(),
-            );
-            log_message.set_len(log_len.try_into().unwrap());
-
-            if is_shader {
-                glDeleteShader(object_id);
-            }
-
-            panic!(
-                "Shader Program Link Error: {}",
-                String::from_utf8_lossy(&log_message)
-            );
         }
     }
 }
