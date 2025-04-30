@@ -4,7 +4,12 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl
+        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
+        glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram,
+        glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays,
+        glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays,
+        glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram,
+        glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl,
     },
     *,
 };
@@ -118,7 +123,6 @@ fn main() {
     unsafe { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0) };
     unsafe { glBindBuffer(GL_ARRAY_BUFFER, 0) };
 
-
     // SHADERS
 
     const VERT_SHADER: &str = r#"#version 330 core
@@ -204,6 +208,14 @@ fn main() {
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 as *const _);
             win.swap_window();
         }
+    }
+
+    unsafe {
+        glDeleteVertexArrays(1, &vao);
+
+        glDeleteBuffers(1, &vbo);
+
+        glDeleteProgram(program);
     }
 }
 
