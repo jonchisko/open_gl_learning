@@ -9,8 +9,8 @@ use gl33::{
         glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays,
         glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetIntegerv,
         glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv,
-        glGetUniformLocation, glLinkProgram, glShaderSource, glUniform4f, glUseProgram,
-        glVertexAttribPointer, load_global_gl,
+        glGetUniformLocation, glLinkProgram, glShaderSource, glUniform1f, glUniform4f,
+        glUseProgram, glVertexAttribPointer, load_global_gl,
     },
     *,
 };
@@ -155,11 +155,13 @@ fn main() {
         layout (location = 0) in vec3 pos;
         layout (location = 1) in vec3 color;
 
+        uniform float xOffset;
+
         out vec4 vertexColor;
 
         void main() {
             //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
-            gl_Position = vec4(pos.x, -pos.y, pos.z, 1.0);
+            gl_Position = vec4(pos.x + xOffset, -pos.y, pos.z, 1.0);
             vertexColor = vec4(color, 1.0);
         }
     "#;
@@ -225,6 +227,11 @@ fn main() {
 
     let now = SystemTime::now();
 
+    let x_offset_name = CString::new("xOffset").unwrap();
+    let vertex_x_offset_location =
+        unsafe { glGetUniformLocation(program, x_offset_name.as_ptr().cast()) };
+    assert!(vertex_x_offset_location >= 0);
+
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
         // Handle events this frame
@@ -253,6 +260,7 @@ fn main() {
             let vertex_color_location = glGetUniformLocation(program, uniform_name.as_ptr().cast());
             assert!(vertex_color_location >= 0);
             glUniform4f(vertex_color_location, 0.0, green_value, 0.0, 1.0);*/
+            glUniform1f(vertex_x_offset_location, 0.5);
 
             glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0 as *const _);
             win.swap_window();
