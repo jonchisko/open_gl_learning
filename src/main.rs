@@ -5,11 +5,11 @@ use beryllium::*;
 use gl33::{
     global_loader::{
         glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
-        glCompileShader, glCreateProgram, glCreateShader, glDeleteShader,
-        glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray,
-        glGenBuffers, glGenVertexArrays, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog,
-        glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram, glVertexAttribPointer,
-        load_global_gl,
+        glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram,
+        glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays,
+        glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays,
+        glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram,
+        glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl,
     },
     *,
 };
@@ -193,6 +193,14 @@ fn main() {
         }
     "#;
 
+    const FRAG_SHADER2: &str = r#"#version 330 core
+        out vec4 final_color;
+
+        void main() {
+            final_color = vec4(0.8, 0.5, 0.0, 1.0);
+        }
+    "#;
+
     let vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     assert!(vertex_shader != 0);
     unsafe {
@@ -219,6 +227,19 @@ fn main() {
     glCompileShader(fragment_shader);
     log_error(fragment_shader, true);
 
+    let fragment_shader2 = glCreateShader(GL_FRAGMENT_SHADER);
+    assert!(fragment_shader != 0);
+    unsafe {
+        glShaderSource(
+            fragment_shader2,
+            1,
+            &(FRAG_SHADER2.as_bytes().as_ptr().cast()),
+            &(FRAG_SHADER2.len().try_into().unwrap()),
+        );
+    }
+    glCompileShader(fragment_shader2);
+    log_error(fragment_shader2, true);
+
     // PROGRAM
     let program = glCreateProgram();
     assert!(program != 0);
@@ -229,6 +250,15 @@ fn main() {
 
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
+
+    let program2 = glCreateProgram();
+    assert!(program2 != 0);
+    glAttachShader(program2, vertex_shader);
+    glAttachShader(program2, fragment_shader2);
+    glLinkProgram(program2);
+    log_error(program2, false);
+
+    glDeleteShader(fragment_shader2);
 
     // Enable vsync - swap_window blocks until the image has been presented to the user
     // So we show images at most as fast the display's refresh rate
@@ -260,11 +290,23 @@ fn main() {
             glBindVertexArray(vao1);
             glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0 as *const _);
 
+            glUseProgram(program2);
             glBindVertexArray(vao2);
             glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0 as *const _);
 
             win.swap_window();
         }
+    }
+
+    unsafe {
+        glDeleteVertexArrays(1, &vao1);
+        glDeleteVertexArrays(1, &vao2);
+
+        glDeleteBuffers(1, &vbo1);
+        glDeleteBuffers(1, &vbo2);
+
+        glDeleteProgram(program);
+        glDeleteProgram(program2);
     }
 }
 
