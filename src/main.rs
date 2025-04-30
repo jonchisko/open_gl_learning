@@ -4,11 +4,7 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
-        glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDrawArrays,
-        glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays,
-        glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram,
-        glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl,
+        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl
     },
     *,
 };
@@ -41,6 +37,7 @@ fn main() {
     };
 
     // Beryllium sticks the window and GL context together as a single thing
+    // I assume it also does the glViewport, which sets the data for the NDC -> screen-space coord.
     let win = sdl
         .create_gl_window(win_args)
         .expect("Could not make a window and context.");
@@ -116,6 +113,12 @@ fn main() {
         glEnableVertexAttribArray(0);
     }
 
+    glBindVertexArray(0);
+    unsafe { glDisableVertexAttribArray(0) };
+    unsafe { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0) };
+    unsafe { glBindBuffer(GL_ARRAY_BUFFER, 0) };
+
+
     // SHADERS
 
     const VERT_SHADER: &str = r#"#version 330 core
@@ -171,8 +174,6 @@ fn main() {
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 
-    glUseProgram(program);
-
     // Enable vsync - swap_window blocks until the image has been presented to the user
     // So we show images at most as fast the display's refresh rate
     let _ = win.set_swap_interval(video::GlSwapInterval::Vsync);
@@ -198,6 +199,8 @@ fn main() {
         unsafe {
             glClear(GL_COLOR_BUFFER_BIT);
             //glDrawArrays(GL_TRIANGLES, 0, 3);
+            glBindVertexArray(vao);
+            glUseProgram(program);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 as *const _);
             win.swap_window();
         }
