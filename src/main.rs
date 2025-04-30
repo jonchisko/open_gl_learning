@@ -4,16 +4,16 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glClear, glDrawArrays, glDrawElements, glEnableVertexAttribArray, glPolygonMode, glVertexAttribPointer, load_global_gl
+        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
+        glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDrawArrays,
+        glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays,
+        glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram,
+        glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl,
     },
     *,
 };
-use opengl_chrno::learn_opengl::{self as learn, Buffer, BufferType, ShaderProgram, VertexArray};
 
 use std::mem;
-
-type Vertex = [f32; 3];
-type TriIndices = [u32; 3];
 
 fn main() {
     // Specify you will be using open GL before creating the window
@@ -50,39 +50,73 @@ fn main() {
         load_global_gl(&|f_name| win.get_proc_address(f_name));
     }
 
-    learn::clear_color(0.2, 0.3, 0.3, 1.0);
+    unsafe { glClearColor(0.2, 0.3, 0.3, 1.0) };
 
-    let vao = VertexArray::new().expect("Could not make a VAO");
-    vao.bind();
+    // VERTEX ARRAY OBJECT
+
+    let mut vao = 0u32;
+    unsafe {
+        glGenVertexArrays(1, &mut vao);
+    }
+    assert!(vao != 0);
+    glBindVertexArray(vao);
 
     // Triangle in Normalized Device Context (NDC).
-    const VERTICES: [Vertex; 4] = [[0.5, 0.5, 0.0], [0.5, -0.5, 0.0], [-0.5, -0.5, 0.0], [-0.5, 0.5, 0.0]];
-    const INDICES: [TriIndices; 2] = [[0, 1, 3], [1, 2, 3]];
+    const VERTICES: [f32; 12] = [
+        0.5, 0.5, 0.0, 0.5, -0.5, 0.0, -0.5, -0.5, 0.0, -0.5, 0.5, 0.0,
+    ];
 
-    let vbo = Buffer::new().expect("Could not make a VBO");
-    vbo.bind(BufferType::Array);
-    learn::buffer_data(
-        BufferType::Array,
-        bytemuck::cast_slice(&VERTICES),
-        GL_STATIC_DRAW,
-    );
+    const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 
-    let ebo = Buffer::new().expect("Could not make the element buffer");
-    ebo.bind(BufferType::ElementArray);
-    learn::buffer_data(BufferType::ElementArray, bytemuck::cast_slice(&INDICES), GL_STATIC_DRAW);
+    // VERTEX BUFFER OBJECT
 
+    let mut vbo = 0u32;
+    unsafe {
+        glGenBuffers(1, &mut vbo);
+    }
+    assert!(vbo != 0);
+    unsafe { glBindBuffer(GL_ARRAY_BUFFER, vbo) };
+    unsafe {
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            (VERTICES.len() * mem::size_of::<f32>()).try_into().unwrap(),
+            VERTICES.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        )
+    };
+
+    // ELEMENT BUFFER OBJECT
+
+    let mut ebo = 0u32;
+    unsafe {
+        glGenBuffers(1, &mut ebo);
+    }
+    assert!(ebo != 0);
+    unsafe {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    }
+    unsafe {
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER,
+            (INDICES.len() * mem::size_of::<u32>()).try_into().unwrap(),
+            INDICES.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        );
+    }
 
     unsafe {
         glVertexAttribPointer(
-            0,                                            // Has to match the shader program later on
-            3,                                            // Number of components in the attribute
+            0,                                               // Has to match the shader program later on
+            3,        // Number of components in the attribute
             GL_FLOAT, // Element type of the data in the attribute
             0,        // normalized
-            mem::size_of::<Vertex>().try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
+            (3 * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
             0 as *const _, // Start of the vertext attribute within the buffer
         );
         glEnableVertexAttribArray(0);
     }
+
+    // SHADERS
 
     const VERT_SHADER: &str = r#"#version 330 core
         layout (location = 0) in vec4 pos;
@@ -100,8 +134,44 @@ fn main() {
         }
     "#;
 
-    let shader_program = ShaderProgram::from_vert_frag(VERT_SHADER, FRAG_SHADER).unwrap();
-    shader_program.use_program();
+    let vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    assert!(vertex_shader != 0);
+    unsafe {
+        glShaderSource(
+            vertex_shader,
+            1,
+            &(VERT_SHADER.as_bytes().as_ptr().cast()),
+            &(VERT_SHADER.len().try_into().unwrap()),
+        );
+    };
+    glCompileShader(vertex_shader);
+    log_error(vertex_shader, true);
+
+    let fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    assert!(fragment_shader != 0);
+    unsafe {
+        glShaderSource(
+            fragment_shader,
+            1,
+            &(FRAG_SHADER.as_bytes().as_ptr().cast()),
+            &(FRAG_SHADER.len().try_into().unwrap()),
+        );
+    }
+    glCompileShader(fragment_shader);
+    log_error(fragment_shader, true);
+
+    // PROGRAM
+    let program = glCreateProgram();
+    assert!(program != 0);
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
+    glLinkProgram(program);
+    log_error(program, false);
+
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+
+    glUseProgram(program);
 
     // Enable vsync - swap_window blocks until the image has been presented to the user
     // So we show images at most as fast the display's refresh rate
@@ -130,6 +200,57 @@ fn main() {
             //glDrawArrays(GL_TRIANGLES, 0, 3);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 as *const _);
             win.swap_window();
+        }
+    }
+}
+
+fn log_error(object_id: u32, is_shader: bool) -> () {
+    let mut success = 0;
+
+    unsafe {
+        if is_shader {
+            glGetShaderiv(object_id, GL_COMPILE_STATUS, &mut success);
+        } else {
+            glGetProgramiv(object_id, GL_LINK_STATUS, &mut success);
+        }
+
+        if success == 0 {
+            let mut log_len = 0i32;
+
+            if is_shader {
+                glGetShaderiv(object_id, GL_INFO_LOG_LENGTH, &mut log_len);
+            } else {
+                glGetProgramiv(object_id, GL_INFO_LOG_LENGTH, &mut log_len);
+            }
+
+            let mut log_message: Vec<u8> = Vec::with_capacity(log_len as usize);
+
+            if is_shader {
+                glGetShaderInfoLog(
+                    object_id,
+                    log_message.capacity() as i32,
+                    &mut log_len,
+                    log_message.as_mut_ptr().cast(),
+                );
+            } else {
+                glGetProgramInfoLog(
+                    object_id,
+                    log_message.capacity() as i32,
+                    &mut log_len,
+                    log_message.as_mut_ptr().cast(),
+                );
+            }
+
+            log_message.set_len(log_len.try_into().unwrap());
+
+            if is_shader {
+                glDeleteShader(object_id);
+            }
+
+            panic!(
+                "Shader Program Link Error: {}",
+                String::from_utf8_lossy(&log_message)
+            );
         }
     }
 }
