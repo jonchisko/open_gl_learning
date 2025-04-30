@@ -108,9 +108,9 @@ fn main() {
     let _ = win.set_swap_interval(video::GlSwapInterval::Vsync);
 
     // Wireframe mode
-    unsafe {
+    /*unsafe {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    }
+    }*/
 
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
