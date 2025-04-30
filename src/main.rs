@@ -4,7 +4,12 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteShader, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl
+        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
+        glCompileShader, glCreateProgram, glCreateShader, glDeleteShader,
+        glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray,
+        glGenBuffers, glGenVertexArrays, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog,
+        glGetShaderiv, glLinkProgram, glShaderSource, glUseProgram, glVertexAttribPointer,
+        load_global_gl,
     },
     *,
 };
@@ -49,54 +54,66 @@ fn main() {
 
     unsafe { glClearColor(0.2, 0.3, 0.3, 1.0) };
 
+    // Triangle in Normalized Device Context (NDC).
+    const V_TRIANGLE1: [f32; 9] = [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.5, 0.5, 0.0];
+    const V_TRIANGLE2: [f32; 9] = [-0.5, -0.5, 0.0, 0.5, 0.5, 0.0, -0.5, 0.5, 0.0];
+
+    const INDICES1: [u32; 3] = [0, 1, 2];
+    const INDICES2: [u32; 3] = [0, 1, 2];
+
     // VERTEX ARRAY OBJECT
 
-    let mut vao = 0u32;
+    let mut vao1 = 0u32;
+    let mut vao2 = 0u32;
     unsafe {
-        glGenVertexArrays(1, &mut vao);
+        // Could also use n == 2 and pass in an array
+        glGenVertexArrays(1, &mut vao1);
+        glGenVertexArrays(1, &mut vao2);
     }
-    assert!(vao != 0);
-    glBindVertexArray(vao);
-
-    // Triangle in Normalized Device Context (NDC).
-    const VERTICES: [f32; 12] = [
-        0.5, 0.5, 0.0, 0.5, -0.5, 0.0, -0.5, -0.5, 0.0, -0.5, 0.5, 0.0,
-    ];
-
-    const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
+    assert!(vao1 != 0);
+    assert!(vao2 != 0);
+    glBindVertexArray(vao1);
 
     // VERTEX BUFFER OBJECT
 
-    let mut vbo = 0u32;
+    let mut vbo1 = 0u32;
+    let mut vbo2 = 0u32;
     unsafe {
-        glGenBuffers(1, &mut vbo);
+        glGenBuffers(1, &mut vbo1);
+        glGenBuffers(1, &mut vbo2);
     }
-    assert!(vbo != 0);
-    unsafe { glBindBuffer(GL_ARRAY_BUFFER, vbo) };
+    assert!(vbo1 != 0);
+    assert!(vbo2 != 0);
+    unsafe { glBindBuffer(GL_ARRAY_BUFFER, vbo1) };
     unsafe {
         glBufferData(
             GL_ARRAY_BUFFER,
-            (VERTICES.len() * mem::size_of::<f32>()).try_into().unwrap(),
-            VERTICES.as_ptr().cast(),
+            (V_TRIANGLE1.len() * mem::size_of::<f32>())
+                .try_into()
+                .unwrap(),
+            V_TRIANGLE1.as_ptr().cast(),
             GL_STATIC_DRAW,
         )
     };
 
     // ELEMENT BUFFER OBJECT
 
-    let mut ebo = 0u32;
+    let mut ebo1 = 0u32;
+    let mut ebo2 = 0u32;
     unsafe {
-        glGenBuffers(1, &mut ebo);
+        glGenBuffers(1, &mut ebo1);
+        glGenBuffers(1, &mut ebo2);
     }
-    assert!(ebo != 0);
+    assert!(ebo1 != 0);
+    assert!(ebo2 != 0);
     unsafe {
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo1);
     }
     unsafe {
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER,
-            (INDICES.len() * mem::size_of::<u32>()).try_into().unwrap(),
-            INDICES.as_ptr().cast(),
+            (INDICES1.len() * mem::size_of::<u32>()).try_into().unwrap(),
+            INDICES1.as_ptr().cast(),
             GL_STATIC_DRAW,
         );
     }
@@ -118,8 +135,47 @@ fn main() {
     unsafe { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0) };
     unsafe { glBindBuffer(GL_ARRAY_BUFFER, 0) };
 
+    glBindVertexArray(vao2);
+    unsafe { glBindBuffer(GL_ARRAY_BUFFER, vbo2) };
+    unsafe {
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            (V_TRIANGLE2.len() * mem::size_of::<f32>())
+                .try_into()
+                .unwrap(),
+            V_TRIANGLE2.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        );
+    }
 
-    // SHADERS
+    unsafe { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo2) };
+    unsafe {
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER,
+            (INDICES2.len() * mem::size_of::<f32>()).try_into().unwrap(),
+            INDICES2.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        );
+    }
+
+    unsafe {
+        glVertexAttribPointer(
+            0,
+            3,
+            GL_FLOAT,
+            0,
+            (3 * mem::size_of::<f32>()).try_into().unwrap(),
+            0 as *const _,
+        );
+        glEnableVertexAttribArray(0);
+    }
+
+    glBindVertexArray(0);
+    unsafe {
+        glDisableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
 
     const VERT_SHADER: &str = r#"#version 330 core
         layout (location = 0) in vec4 pos;
@@ -199,9 +255,14 @@ fn main() {
         unsafe {
             glClear(GL_COLOR_BUFFER_BIT);
             //glDrawArrays(GL_TRIANGLES, 0, 3);
-            glBindVertexArray(vao);
             glUseProgram(program);
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 as *const _);
+
+            glBindVertexArray(vao1);
+            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0 as *const _);
+
+            glBindVertexArray(vao2);
+            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0 as *const _);
+
             win.swap_window();
         }
     }
