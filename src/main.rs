@@ -7,14 +7,19 @@ use gl33::{
         glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
         glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram,
         glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays,
-        glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays,
-        glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glLinkProgram,
-        glShaderSource, glUseProgram, glVertexAttribPointer, load_global_gl,
+        glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetIntegerv,
+        glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv,
+        glGetUniformLocation, glLinkProgram, glShaderSource, glUniform4f, glUseProgram,
+        glVertexAttribPointer, load_global_gl,
     },
     *,
 };
 
-use std::mem;
+use std::{
+    ffi::{CStr, CString},
+    mem,
+    time::{self, Duration, SystemTime},
+};
 
 fn main() {
     // Specify you will be using open GL before creating the window
@@ -64,11 +69,12 @@ fn main() {
     glBindVertexArray(vao);
 
     // Triangle in Normalized Device Context (NDC).
-    const VERTICES: [f32; 12] = [
-        0.5, 0.5, 0.0, 0.5, -0.5, 0.0, -0.5, -0.5, 0.0, -0.5, 0.5, 0.0,
+    const VERTICES: [f32; 18] = [
+        // pos          // col          // pos etc.
+        -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0,
     ];
 
-    const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
+    const INDICES: [u32; 3] = [0, 1, 2];
 
     // VERTEX BUFFER OBJECT
 
@@ -108,36 +114,66 @@ fn main() {
 
     unsafe {
         glVertexAttribPointer(
-            0,                                               // Has to match the shader program later on
+            0,                                                   // Has to match the shader program later on
             3,        // Number of components in the attribute
             GL_FLOAT, // Element type of the data in the attribute
             0,        // normalized
-            (3 * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
+            (2 * 3 * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
             0 as *const _, // Start of the vertext attribute within the buffer
         );
         glEnableVertexAttribArray(0);
+
+        glVertexAttribPointer(
+            1,
+            3,
+            GL_FLOAT,
+            0,
+            (2 * 3 * mem::size_of::<f32>()).try_into().unwrap(),
+            (3 * mem::size_of::<f32>()) as *const _,
+        );
+        glEnableVertexAttribArray(1);
     }
 
     glBindVertexArray(0);
     unsafe { glDisableVertexAttribArray(0) };
+    unsafe { glDisableVertexAttribArray(1) };
     unsafe { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0) };
     unsafe { glBindBuffer(GL_ARRAY_BUFFER, 0) };
 
     // SHADERS
 
+    let mut max_attribute_number = 0i32;
+    unsafe {
+        glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &mut max_attribute_number);
+    };
+    println!(
+        "Max number of vertex attributes (input variable) for vertex shader: {}",
+        max_attribute_number
+    );
+
     const VERT_SHADER: &str = r#"#version 330 core
-        layout (location = 0) in vec4 pos;
+        layout (location = 0) in vec3 pos;
+        layout (location = 1) in vec3 color;
+
+        out vec4 vertexColor;
+
         void main() {
             //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
-            gl_Position = pos;
+            gl_Position = vec4(pos, 1.0);
+            vertexColor = vec4(color, 1.0);
         }
     "#;
 
     const FRAG_SHADER: &str = r#"#version 330 core
         out vec4 final_color;
 
+        //uniform vec4 ourColor;
+
+        in vec4 vertexColor;
+
         void main() {
-            final_color = vec4(1.0, 0.5, 0.2, 1.0);
+            final_color = vertexColor;
+            //final_color = ourColor;
         }
     "#;
 
@@ -187,6 +223,8 @@ fn main() {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }*/
 
+    let now = SystemTime::now();
+
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
         // Handle events this frame
@@ -202,10 +240,21 @@ fn main() {
 
         unsafe {
             glClear(GL_COLOR_BUFFER_BIT);
+
             //glDrawArrays(GL_TRIANGLES, 0, 3);
+
             glBindVertexArray(vao);
             glUseProgram(program);
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0 as *const _);
+
+            /*let time_value = now.elapsed().unwrap().as_secs_f32();
+            let green_value = f32::sin(time_value) / 2.0 + 0.5;
+
+            let uniform_name = CString::new("ourColor").unwrap();
+            let vertex_color_location = glGetUniformLocation(program, uniform_name.as_ptr().cast());
+            assert!(vertex_color_location >= 0);
+            glUniform4f(vertex_color_location, 0.0, green_value, 0.0, 1.0);*/
+
+            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0 as *const _);
             win.swap_window();
         }
     }
