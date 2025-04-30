@@ -162,9 +162,12 @@ fn main() {
         void main() {
             //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
             gl_Position = vec4(pos.x + xOffset, -pos.y, pos.z, 1.0);
-            vertexColor = vec4(color, 1.0);
+            //vertexColor = vec4(color, 1.0);
+            vertexColor = vec4(pos.x + xOffset, -pos.y, pos.z, 1.0);
         }
     "#;
+
+    // why is the bottom-left side of our triangle black? Cuz of the negative values. Not in my case tho, due to offset
 
     const FRAG_SHADER: &str = r#"#version 330 core
         out vec4 final_color;
