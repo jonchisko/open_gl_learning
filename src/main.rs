@@ -1,7 +1,7 @@
 // Make it windows and not console app. Doesnt open the terminal
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use beryllium::*;
+use beryllium::{events::SDL_Keycode, *};
 use gl33::{
     global_loader::{
         glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray,
@@ -11,7 +11,7 @@ use gl33::{
         glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv,
         glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv,
         glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri,
-        glUniform1i, glUniform4f, glUseProgram, glVertexAttribPointer, load_global_gl,
+        glUniform1f, glUniform1i, glUniform4f, glUseProgram, glVertexAttribPointer, load_global_gl,
     },
     *,
 };
@@ -29,10 +29,10 @@ fn get_vertices() -> [f32; 32] {
     // Triangle in Normalized Device Context (NDC).
     [
         // pos                // col              // tex coord 
-        -0.5, -0.5, 0.0,      1.0, 0.0, 0.0,      0.45, 0.45,  
-        0.5, -0.5, 0.0,       0.0, 1.0, 0.0,      0.55, 0.45,
-        0.5, 0.5, 0.0,        0.0, 0.0, 1.0,      0.55, 0.55,
-        -0.5, 0.5, 0.0,       1.0, 1.0, 0.0,      0.45, 0.55,
+        -0.5, -0.5, 0.0,      1.0, 0.0, 0.0,      0.0, 0.0,  
+        0.5, -0.5, 0.0,       0.0, 1.0, 0.0,      1.0, 0.0,
+        0.5, 0.5, 0.0,        0.0, 0.0, 1.0,      1.0, 1.0,
+        -0.5, 0.5, 0.0,       1.0, 1.0, 0.0,      0.0, 1.0,
     ]
 }
 
@@ -126,10 +126,10 @@ fn main() {
         glTexParameteri(
             GL_TEXTURE_2D,
             GL_TEXTURE_MIN_FILTER,
-            GL_NEAREST.0 as i32,
+            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
         )
     }
-    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST.0 as i32) }
+    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32) }
 
     unsafe {
         glTexImage2D(
@@ -167,9 +167,9 @@ fn main() {
         glTexParameteri(
             GL_TEXTURE_2D,
             GL_TEXTURE_MIN_FILTER,
-            GL_NEAREST.0 as i32,
+            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
         );
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST.0 as i32);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
     }
 
     unsafe {
@@ -309,11 +309,13 @@ fn main() {
         uniform sampler2D texture1;
         uniform sampler2D texture2;
 
+        uniform float mixValue;
+
         in vec4 vertexColor;
         in vec2 texCoord;
 
         void main() {
-            final_color = mix(texture(texture1, texCoord), texture(texture2, vec2(texCoord.x, 1 - texCoord.y)), 0.2);
+            final_color = mix(texture(texture1, texCoord), texture(texture2, vec2(texCoord.x, 1 - texCoord.y)), mixValue);
             //final_color = texture(texture1, texCoord) * vertexColor;
             //final_color = ourColor;
         }
@@ -380,12 +382,28 @@ fn main() {
         glUniform1i(location_texture2, 1);
     }
 
+    let mut mix_value = 0.0f32;
+
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
         // Handle events this frame
         while let Some(event) = sdl.poll_events() {
             match event {
                 (events::Event::Quit, _) => break 'main_loop,
+                (
+                    events::Event::Key {
+                        win_id: _,
+                        pressed: true,
+                        repeat: _,
+                        scancode: _,
+                        keycode: SDL_Keycode(1073741906),
+                        modifiers: _,
+                    },
+                    _,
+                ) => {
+                    mix_value = (mix_value + 0.05) % 1f32;
+                    println!("MixValue: {}", mix_value);
+                }
                 _ => (),
             }
         }
@@ -414,6 +432,11 @@ fn main() {
             let vertex_color_location = glGetUniformLocation(program, uniform_name.as_ptr().cast());
             assert!(vertex_color_location >= 0);
             glUniform4f(vertex_color_location, 0.0, green_value, 0.0, 1.0);*/
+
+            let mix_value_name = CString::new("mixValue").unwrap();
+            let mix_value_location = glGetUniformLocation(program, mix_value_name.as_ptr().cast());
+            assert!(mix_value_location >= 0);
+            glUniform1f(mix_value_location, mix_value);
 
             glDrawElements(
                 GL_TRIANGLES,
