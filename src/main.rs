@@ -313,7 +313,7 @@ fn main() {
         in vec2 texCoord;
 
         void main() {
-            final_color = mix(texture(texture1, texCoord), texture(texture2, texCoord), 0.2);
+            final_color = mix(texture(texture1, texCoord), texture(texture2, vec2(texCoord.x, 1 - texCoord.y)), 0.2);
             //final_color = texture(texture1, texCoord) * vertexColor;
             //final_color = ourColor;
         }
