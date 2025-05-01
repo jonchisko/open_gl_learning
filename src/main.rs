@@ -29,10 +29,10 @@ fn get_vertices() -> [f32; 32] {
     // Triangle in Normalized Device Context (NDC).
     [
         // pos                // col              // tex coord 
-        -0.5, -0.5, 0.0,      1.0, 0.0, 0.0,      0.0, 0.0,  
-        0.5, -0.5, 0.0,       0.0, 1.0, 0.0,      2.0, 0.0,
-        0.5, 0.5, 0.0,        0.0, 0.0, 1.0,      2.0, 2.0,
-        -0.5, 0.5, 0.0,       1.0, 1.0, 0.0,      0.0, 2.0,
+        -0.5, -0.5, 0.0,      1.0, 0.0, 0.0,      0.45, 0.45,  
+        0.5, -0.5, 0.0,       0.0, 1.0, 0.0,      0.55, 0.45,
+        0.5, 0.5, 0.0,        0.0, 0.0, 1.0,      0.55, 0.55,
+        -0.5, 0.5, 0.0,       1.0, 1.0, 0.0,      0.45, 0.55,
     ]
 }
 
@@ -126,10 +126,10 @@ fn main() {
         glTexParameteri(
             GL_TEXTURE_2D,
             GL_TEXTURE_MIN_FILTER,
-            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
+            GL_NEAREST.0 as i32,
         )
     }
-    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32) }
+    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST.0 as i32) }
 
     unsafe {
         glTexImage2D(
@@ -167,9 +167,9 @@ fn main() {
         glTexParameteri(
             GL_TEXTURE_2D,
             GL_TEXTURE_MIN_FILTER,
-            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
+            GL_NEAREST.0 as i32,
         );
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST.0 as i32);
     }
 
     unsafe {
