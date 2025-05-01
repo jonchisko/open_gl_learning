@@ -4,13 +4,14 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glAttachShader, glBindBuffer, glBindVertexArray, glBufferData, glClear, glClearColor,
-        glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram,
-        glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays,
-        glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenVertexArrays, glGetIntegerv,
+        glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray,
+        glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader,
+        glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays,
+        glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray,
+        glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv,
         glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv,
-        glGetUniformLocation, glLinkProgram, glShaderSource, glUniform4f, glUseProgram,
-        glVertexAttribPointer, load_global_gl,
+        glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri,
+        glUniform1i, glUniform4f, glUseProgram, glVertexAttribPointer, load_global_gl,
     },
     *,
 };
@@ -20,6 +21,30 @@ use std::{
     mem,
     time::{self, Duration, SystemTime},
 };
+
+use image::ImageReader;
+
+#[rustfmt::skip]
+fn get_vertices() -> [f32; 32] {
+    // Triangle in Normalized Device Context (NDC).
+    [
+        // pos                // col              // tex coord 
+        -0.5, -0.5, 0.0,      1.0, 0.0, 0.0,      0.0, 0.0,  
+        0.5, -0.5, 0.0,       0.0, 1.0, 0.0,      1.0, 0.0,
+        0.5, 0.5, 0.0,        0.0, 0.0, 1.0,      1.0, 1.0,
+        -0.5, 0.5, 0.0,       1.0, 1.0, 0.0,      0.0, 1.0,
+    ]
+}
+
+#[rustfmt::skip]
+fn get_indices() -> [u32; 6] {
+    [
+        // Triangle 1
+        0, 1, 2,
+        // Triangle 2
+        0, 2, 3,
+    ]
+}
 
 fn main() {
     // Specify you will be using open GL before creating the window
@@ -69,12 +94,100 @@ fn main() {
     glBindVertexArray(vao);
 
     // Triangle in Normalized Device Context (NDC).
-    const VERTICES: [f32; 18] = [
-        // pos          // col          // pos etc.
-        -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0,
-    ];
+    let vertices = get_vertices();
 
-    const INDICES: [u32; 3] = [0, 1, 2];
+    let indices = get_indices();
+
+    // Load texture image
+    let wooden_crate_texture = ImageReader::open("./assets/wall.jpg")
+        .expect("Could not open image")
+        .decode()
+        .expect("Could not decode the image");
+    let (wooden_width, wooden_height) =
+        (wooden_crate_texture.width(), wooden_crate_texture.height());
+    let wooden_crate_texture = wooden_crate_texture.as_bytes();
+
+    let face_texture = ImageReader::open("./assets/awesomeface.png")
+        .expect("Could not open image")
+        .decode()
+        .expect("Could not decode the image");
+    let (face_width, face_height) = (face_texture.width(), face_texture.height());
+    let face_texture = face_texture.as_bytes();
+
+    // TEXTURE GENERATION
+    let mut texture_wooden_crate = 0u32;
+    unsafe { glGenTextures(1, &mut texture_wooden_crate) };
+    assert!(texture_wooden_crate != 0);
+    unsafe { glBindTexture(GL_TEXTURE_2D, texture_wooden_crate) };
+
+    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT.0 as i32) };
+    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT.0 as i32) };
+    unsafe {
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_MIN_FILTER,
+            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
+        )
+    }
+    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32) }
+
+    unsafe {
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGB.0 as i32, // format in the opengl/gpu
+            wooden_width as i32,
+            wooden_height as i32,
+            0,
+            GL_RGB, // original format, so our byte slice
+            GL_UNSIGNED_BYTE,
+            wooden_crate_texture.as_ptr().cast(),
+        );
+    }
+    unsafe {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    unsafe {
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    // Face texture
+    let mut texture_face = 0u32;
+    unsafe {
+        glGenTextures(1, &mut texture_face);
+    }
+    assert!(texture_face != 0);
+    unsafe {
+        glBindTexture(GL_TEXTURE_2D, texture_face);
+    }
+
+    unsafe {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT.0 as i32);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT.0 as i32);
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_MIN_FILTER,
+            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
+        );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
+    }
+
+    unsafe {
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGB.0 as i32,
+            face_width as i32,
+            face_height as i32,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            face_texture.as_ptr().cast(),
+        );
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 
     // VERTEX BUFFER OBJECT
 
@@ -87,8 +200,8 @@ fn main() {
     unsafe {
         glBufferData(
             GL_ARRAY_BUFFER,
-            (VERTICES.len() * mem::size_of::<f32>()).try_into().unwrap(),
-            VERTICES.as_ptr().cast(),
+            (vertices.len() * mem::size_of::<f32>()).try_into().unwrap(),
+            vertices.as_ptr().cast(),
             GL_STATIC_DRAW,
         )
     };
@@ -106,19 +219,19 @@ fn main() {
     unsafe {
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER,
-            (INDICES.len() * mem::size_of::<u32>()).try_into().unwrap(),
-            INDICES.as_ptr().cast(),
+            (indices.len() * mem::size_of::<u32>()).try_into().unwrap(),
+            indices.as_ptr().cast(),
             GL_STATIC_DRAW,
         );
     }
 
     unsafe {
         glVertexAttribPointer(
-            0,                                                   // Has to match the shader program later on
+            0,        // Has to match the shader program later on
             3,        // Number of components in the attribute
             GL_FLOAT, // Element type of the data in the attribute
             0,        // normalized
-            (2 * 3 * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
+            ((2 * 3 + 2) * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
             0 as *const _, // Start of the vertext attribute within the buffer
         );
         glEnableVertexAttribArray(0);
@@ -128,17 +241,38 @@ fn main() {
             3,
             GL_FLOAT,
             0,
-            (2 * 3 * mem::size_of::<f32>()).try_into().unwrap(),
+            ((2 * 3 + 2) * mem::size_of::<f32>()).try_into().unwrap(),
             (3 * mem::size_of::<f32>()) as *const _,
         );
         glEnableVertexAttribArray(1);
+
+        glVertexAttribPointer(
+            2,
+            2,
+            GL_FLOAT,
+            0,
+            ((2 * 3 + 2) * mem::size_of::<f32>()).try_into().unwrap(),
+            (6 * mem::size_of::<f32>()) as *const _,
+        );
+        glEnableVertexAttribArray(2);
     }
 
     glBindVertexArray(0);
-    unsafe { glDisableVertexAttribArray(0) };
-    unsafe { glDisableVertexAttribArray(1) };
-    unsafe { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0) };
-    unsafe { glBindBuffer(GL_ARRAY_BUFFER, 0) };
+    unsafe {
+        glDisableVertexAttribArray(0);
+    }
+    unsafe {
+        glDisableVertexAttribArray(1);
+    }
+    unsafe {
+        glDisableVertexAttribArray(2);
+    }
+    unsafe {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+    unsafe {
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 
     // SHADERS
 
@@ -154,13 +288,16 @@ fn main() {
     const VERT_SHADER: &str = r#"#version 330 core
         layout (location = 0) in vec3 pos;
         layout (location = 1) in vec3 color;
+        layout (location = 2) in vec2 textureCoord;
 
         out vec4 vertexColor;
+        out vec2 texCoord;
 
         void main() {
             //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
             gl_Position = vec4(pos, 1.0);
             vertexColor = vec4(color, 1.0);
+            texCoord = textureCoord;
         }
     "#;
 
@@ -168,11 +305,16 @@ fn main() {
         out vec4 final_color;
 
         //uniform vec4 ourColor;
+        // built in datatype for texture objects
+        uniform sampler2D texture1;
+        uniform sampler2D texture2;
 
         in vec4 vertexColor;
+        in vec2 texCoord;
 
         void main() {
-            final_color = vertexColor;
+            final_color = mix(texture(texture1, texCoord), texture(texture2, texCoord), 0.2);
+            //final_color = texture(texture1, texCoord) * vertexColor;
             //final_color = ourColor;
         }
     "#;
@@ -225,6 +367,19 @@ fn main() {
 
     let now = SystemTime::now();
 
+    glUseProgram(program);
+    let texture1 = CString::new("texture1").unwrap();
+    let texture2 = CString::new("texture2").unwrap();
+
+    let location_texture1 = unsafe { glGetUniformLocation(program, texture1.as_ptr().cast()) };
+    let location_texture2 = unsafe { glGetUniformLocation(program, texture2.as_ptr().cast()) };
+    assert!(location_texture1 >= 0);
+    assert!(location_texture2 >= 0);
+    unsafe {
+        glUniform1i(location_texture1, 0);
+        glUniform1i(location_texture2, 1);
+    }
+
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
         // Handle events this frame
@@ -243,8 +398,14 @@ fn main() {
 
             //glDrawArrays(GL_TRIANGLES, 0, 3);
 
+            // The default texture unit for a texture is 0 which is the default active texture unit
+            // so we didn't need to assign a location in the previous section
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture_wooden_crate);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, texture_face);
+
             glBindVertexArray(vao);
-            glUseProgram(program);
 
             /*let time_value = now.elapsed().unwrap().as_secs_f32();
             let green_value = f32::sin(time_value) / 2.0 + 0.5;
@@ -254,7 +415,12 @@ fn main() {
             assert!(vertex_color_location >= 0);
             glUniform4f(vertex_color_location, 0.0, green_value, 0.0, 1.0);*/
 
-            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0 as *const _);
+            glDrawElements(
+                GL_TRIANGLES,
+                indices.len() as i32,
+                GL_UNSIGNED_INT,
+                0 as *const _,
+            );
             win.swap_window();
         }
     }
