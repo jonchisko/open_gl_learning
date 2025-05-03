@@ -406,10 +406,11 @@ fn main() {
             // Compute matrix
 
             //let rotation_matrix = glam::Mat4::from_rotation_z(std::f32::consts::PI/2.0);
-            let mut rotation_translation_matrix = glam::Mat4::from_rotation_z(now.elapsed().unwrap().as_secs_f32() % std::f32::consts::TAU);
-            rotation_translation_matrix.w_axis = glam::vec4(0.5, -0.5, 0.0, 1.0);
+            let translation_matrix = glam::Mat4::from_translation(glam::Vec3 { x: 0.5, y: -0.5, z: 0.0 });
+            let rotation_matrix = glam::Mat4::from_rotation_z(now.elapsed().unwrap().as_secs_f32() % std::f32::consts::TAU);
+            let translation_rotation_matrix = rotation_matrix.mul_mat4(&translation_matrix);
 
-            glUniformMatrix4fv(location_transform, 1, 0, rotation_translation_matrix.to_cols_array().as_ptr());
+            glUniformMatrix4fv(location_transform, 1, 0, translation_rotation_matrix.to_cols_array().as_ptr());
 
             glBindVertexArray(vao);
 
