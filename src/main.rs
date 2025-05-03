@@ -4,22 +4,14 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray,
-        glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader,
-        glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays,
-        glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray,
-        glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv,
-        glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv,
-        glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri,
-        glUniform1i, glUniform4f, glUseProgram, glVertexAttribPointer, load_global_gl,
+        glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri, glUniform1i, glUniform4f, glUniformMatrix4fv, glUseProgram, glVertexAttribPointer, load_global_gl
     },
     *,
 };
+use glam::vec4;
 
 use std::{
-    ffi::{CStr, CString},
-    mem,
-    time::{self, Duration, SystemTime},
+    ffi::CString, mem, time::SystemTime
 };
 
 use image::ImageReader;
@@ -290,12 +282,14 @@ fn main() {
         layout (location = 1) in vec3 color;
         layout (location = 2) in vec2 textureCoord;
 
+        uniform mat4 transform;
+
         out vec4 vertexColor;
         out vec2 texCoord;
 
         void main() {
             //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
-            gl_Position = vec4(pos, 1.0);
+            gl_Position = transform * vec4(pos, 1.0);
             vertexColor = vec4(color, 1.0);
             texCoord = textureCoord;
         }
@@ -380,6 +374,10 @@ fn main() {
         glUniform1i(location_texture2, 1);
     }
 
+    let transform = CString::new("transform").unwrap();
+    let location_transform = unsafe { glGetUniformLocation(program, transform.as_ptr().cast()) };
+    assert!(location_transform >= 0);
+
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
         // Handle events this frame
@@ -404,6 +402,14 @@ fn main() {
             glBindTexture(GL_TEXTURE_2D, texture_wooden_crate);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, texture_face);
+
+            // Compute matrix
+
+            //let rotation_matrix = glam::Mat4::from_rotation_z(std::f32::consts::PI/2.0);
+            let mut rotation_translation_matrix = glam::Mat4::from_rotation_z(now.elapsed().unwrap().as_secs_f32() % std::f32::consts::TAU);
+            rotation_translation_matrix.w_axis = glam::vec4(0.5, -0.5, 0.0, 1.0);
+
+            glUniformMatrix4fv(location_transform, 1, 0, rotation_translation_matrix.to_cols_array().as_ptr());
 
             glBindVertexArray(vao);
 
