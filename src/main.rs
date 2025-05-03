@@ -8,7 +8,7 @@ use gl33::{
     },
     *,
 };
-use glam::vec4;
+use glam::{vec4, Vec3};
 
 use std::{
     ffi::CString, mem, time::SystemTime
@@ -408,9 +408,9 @@ fn main() {
             //let rotation_matrix = glam::Mat4::from_rotation_z(std::f32::consts::PI/2.0);
             let translation_matrix = glam::Mat4::from_translation(glam::Vec3 { x: 0.5, y: -0.5, z: 0.0 });
             let rotation_matrix = glam::Mat4::from_rotation_z(now.elapsed().unwrap().as_secs_f32() % std::f32::consts::TAU);
-            let translation_rotation_matrix = rotation_matrix.mul_mat4(&translation_matrix);
+            let rotation_trnaslation_matrix = translation_matrix.mul_mat4(&rotation_matrix);
 
-            glUniformMatrix4fv(location_transform, 1, 0, translation_rotation_matrix.to_cols_array().as_ptr());
+            glUniformMatrix4fv(location_transform, 1, 0, rotation_trnaslation_matrix.to_cols_array().as_ptr());
 
             glBindVertexArray(vao);
 
@@ -428,6 +428,16 @@ fn main() {
                 GL_UNSIGNED_INT,
                 0 as *const _,
             );
+            
+            // Second container
+
+            let translation_matrix = glam::Mat4::from_translation(glam::Vec3 { x: -0.5, y: 0.5, z: 0.0 });
+            let scale_matrix = glam::Mat4::from_scale(glam::Vec3{x: now.elapsed().unwrap().as_secs_f32().sin() + 1.0, y: now.elapsed().unwrap().as_secs_f32().sin() + 1.0, z: 0.0});
+            let rotation_trnaslation_matrix = translation_matrix.mul_mat4(&scale_matrix);
+
+            glUniformMatrix4fv(location_transform, 1, 0, rotation_trnaslation_matrix.to_cols_array().as_ptr());
+            glDrawElements(GL_TRIANGLES, indices.len() as i32, GL_UNSIGNED_INT, 0 as *const _);
+
             win.swap_window();
         }
     }
