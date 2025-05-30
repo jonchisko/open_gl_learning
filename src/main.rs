@@ -11,7 +11,7 @@ use gl33::{
 use glam::vec4;
 
 use std::{
-    ffi::CString, mem, time::SystemTime
+    f32::consts::PI, ffi::CString, mem, time::SystemTime
 };
 
 use image::ImageReader;
@@ -282,14 +282,16 @@ fn main() {
         layout (location = 1) in vec3 color;
         layout (location = 2) in vec2 textureCoord;
 
-        uniform mat4 transform;
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 projection;
 
         out vec4 vertexColor;
         out vec2 texCoord;
 
         void main() {
             //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
-            gl_Position = transform * vec4(pos, 1.0);
+            gl_Position = projection * view * model * vec4(pos, 1.0);
             vertexColor = vec4(color, 1.0);
             texCoord = textureCoord;
         }
@@ -307,7 +309,7 @@ fn main() {
         in vec2 texCoord;
 
         void main() {
-            final_color = mix(texture(texture1, texCoord), texture(texture2, texCoord), 0.2);
+            final_color = mix(texture(texture1, texCoord), texture(texture2, vec2(texCoord.x, 1.0 - texCoord.y)), 0.2);
             //final_color = texture(texture1, texCoord) * vertexColor;
             //final_color = ourColor;
         }
@@ -374,9 +376,17 @@ fn main() {
         glUniform1i(location_texture2, 1);
     }
 
-    let transform = CString::new("transform").unwrap();
-    let location_transform = unsafe { glGetUniformLocation(program, transform.as_ptr().cast()) };
-    assert!(location_transform >= 0);
+    let model = CString::new("model").unwrap();
+    let location_model = unsafe { glGetUniformLocation(program, model.as_ptr().cast()) };
+    assert!(location_model >= 0);
+
+    let view = CString::new("view").unwrap();
+    let location_view = unsafe { glGetUniformLocation(program, view.as_ptr().cast())};
+    assert!(location_view >= 0);
+
+    let projection = CString::new("projection").unwrap();
+    let location_projection = unsafe {glGetUniformLocation(program, projection.as_ptr().cast())};
+    assert!(location_projection >= 0);
 
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
@@ -406,10 +416,17 @@ fn main() {
             // Compute matrix
 
             //let rotation_matrix = glam::Mat4::from_rotation_z(std::f32::consts::PI/2.0);
-            let mut rotation_translation_matrix = glam::Mat4::from_rotation_z(now.elapsed().unwrap().as_secs_f32() % std::f32::consts::TAU);
-            rotation_translation_matrix.w_axis = glam::vec4(0.5, -0.5, 0.0, 1.0);
+            let mut model_matrix = glam::Mat4::IDENTITY;
+            model_matrix = model_matrix * glam::Mat4::from_rotation_x(-PI/3.0);
+            glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
 
-            glUniformMatrix4fv(location_transform, 1, 0, rotation_translation_matrix.to_cols_array().as_ptr());
+            let mut view_matrix = glam::Mat4::IDENTITY;
+            view_matrix = view_matrix * glam::Mat4::from_translation(glam::Vec3::new(0.0, 0.0, -3.0));
+            glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
+
+            let mut projection_matrix = glam::Mat4::IDENTITY;
+            projection_matrix = projection_matrix * glam::Mat4::perspective_rh_gl(PI/4.0, 800.0/600.0, 0.1, 100.0);
+            glUniformMatrix4fv(location_projection, 1, 0, projection_matrix.to_cols_array().as_ptr());
 
             glBindVertexArray(vao);
 
