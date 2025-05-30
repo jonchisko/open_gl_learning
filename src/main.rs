@@ -418,12 +418,33 @@ fn main() {
 
             //glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
 
-            let mut view_matrix = glam::Mat4::IDENTITY;
-            view_matrix = view_matrix * glam::Mat4::from_translation(glam::Vec3::new(-4.0, -5.0, -3.0));
+            // CAMERA SETUP
+
+            // rotate camera around (ORBIT)
+            let radius = 10.0;
+            let cam_x = time_value.sin() * radius;
+            let cam_z = time_value.cos() * radius;
+
+            let camera_pos = glam::Vec3::new(cam_x, 0.0, cam_z);
+            let camera_target = glam::vec3(0.0, 0.0, 0.0);
+            let camera_direction = (camera_pos - camera_target).normalize();
+
+            let global_up = glam::Vec3::new(0.0, 1.0, 0.0);
+            let camera_right = global_up.cross(camera_direction).normalize();
+
+            let camera_up = camera_direction.cross(camera_right);
+
+            let view_matrix_3 = glam::mat3(camera_right, camera_up, camera_direction).transpose();
+            let mut transpose_matrix = glam::Mat4::IDENTITY;
+            transpose_matrix.w_axis = glam::Vec4::from_array([-camera_pos[0], -camera_pos[1], -camera_pos[2], 1.0]);
+            let view_matrix = glam::Mat4::from_mat3(view_matrix_3) * transpose_matrix;
+
+            //let view_matrix = glam::Mat4::look_at_rh(camera_pos, camera_target, global_up);
+
             glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
 
             let mut projection_matrix = glam::Mat4::IDENTITY;
-            projection_matrix = projection_matrix * glam::Mat4::perspective_rh_gl(PI/2.0, 800.0/600.0, 0.1, 100.0);
+            projection_matrix = projection_matrix * glam::Mat4::perspective_rh_gl(PI/4.0, 800.0/600.0, 0.1, 100.0);
             glUniformMatrix4fv(location_projection, 1, 0, projection_matrix.to_cols_array().as_ptr());
 
             glBindVertexArray(vao);
