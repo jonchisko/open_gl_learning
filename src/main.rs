@@ -4,7 +4,7 @@
 use beryllium::*;
 use gl33::{
     global_loader::{
-        glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnableVertexAttribArray, glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri, glUniform1i, glUniform4f, glUniformMatrix4fv, glUseProgram, glVertexAttribPointer, load_global_gl
+        glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnable, glEnableVertexAttribArray, glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri, glUniform1i, glUniform4f, glUniformMatrix4fv, glUseProgram, glVertexAttribPointer, load_global_gl
     },
     *,
 };
@@ -17,24 +17,49 @@ use std::{
 use image::ImageReader;
 
 #[rustfmt::skip]
-fn get_vertices() -> [f32; 32] {
-    // Triangle in Normalized Device Context (NDC).
-    [
-        // pos                // col              // tex coord 
-        -0.5, -0.5, 0.0,      1.0, 0.0, 0.0,      0.0, 0.0,  
-        0.5, -0.5, 0.0,       0.0, 1.0, 0.0,      1.0, 0.0,
-        0.5, 0.5, 0.0,        0.0, 0.0, 1.0,      1.0, 1.0,
-        -0.5, 0.5, 0.0,       1.0, 1.0, 0.0,      0.0, 1.0,
-    ]
-}
+fn get_vertices() -> [f32; 180] {
+    [ // I coppied the data from learnopengl, 1.5 -> 1.0 and 0.5 to 0.0 but i am too lazy
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 0.0,
 
-#[rustfmt::skip]
-fn get_indices() -> [u32; 6] {
-    [
-        // Triangle 1
-        0, 1, 2,
-        // Triangle 2
-        0, 2, 3,
+    -0.5, -0.5,  0.5,  0.5, 0.5,
+     0.5, -0.5,  0.5,  1.5, 0.5,
+     0.5,  0.5,  0.5,  1.5, 1.5,
+     0.5,  0.5,  0.5,  1.5, 1.5,
+    -0.5,  0.5,  0.5,  0.5, 1.5,
+    -0.5, -0.5,  0.5,  0.5, 0.5,
+
+    -0.5,  0.5,  0.5,  1.5, 0.5,
+    -0.5,  0.5, -0.5,  1.5, 1.5,
+    -0.5, -0.5, -0.5,  0.5, 1.5,
+    -0.5, -0.5, -0.5,  0.5, 1.5,
+    -0.5, -0.5,  0.5,  0.5, 0.5,
+    -0.5,  0.5,  0.5,  1.5, 0.5,
+
+     0.5,  0.5,  0.5,  1.5, 0.5,
+     0.5,  0.5, -0.5,  1.5, 1.5,
+     0.5, -0.5, -0.5,  0.5, 1.5,
+     0.5, -0.5, -0.5,  0.5, 1.5,
+     0.5, -0.5,  0.5,  0.5, 0.5,
+     0.5,  0.5,  0.5,  1.5, 0.5,
+
+    -0.5, -0.5, -0.5,  0.5, 1.5,
+     0.5, -0.5, -0.5,  1.5, 1.5,
+     0.5, -0.5,  0.5,  1.5, 0.5,
+     0.5, -0.5,  0.5,  1.5, 0.5,
+    -0.5, -0.5,  0.5,  0.5, 0.5,
+    -0.5, -0.5, -0.5,  0.5, 1.5,
+
+    -0.5,  0.5, -0.5,  0.5, 1.5,
+     0.5,  0.5, -0.5,  1.5, 1.5,
+     0.5,  0.5,  0.5,  1.5, 0.5,
+     0.5,  0.5,  0.5,  1.5, 0.5,
+    -0.5,  0.5,  0.5,  0.5, 0.5,
+    -0.5,  0.5, -0.5,  0.5, 1.5
     ]
 }
 
@@ -85,10 +110,7 @@ fn main() {
     assert!(vao != 0);
     glBindVertexArray(vao);
 
-    // Triangle in Normalized Device Context (NDC).
     let vertices = get_vertices();
-
-    let indices = get_indices();
 
     // Load texture image
     let wooden_crate_texture = ImageReader::open("./assets/wall.jpg")
@@ -198,55 +220,26 @@ fn main() {
         )
     };
 
-    // ELEMENT BUFFER OBJECT
-
-    let mut ebo = 0u32;
-    unsafe {
-        glGenBuffers(1, &mut ebo);
-    }
-    assert!(ebo != 0);
-    unsafe {
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    }
-    unsafe {
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER,
-            (indices.len() * mem::size_of::<u32>()).try_into().unwrap(),
-            indices.as_ptr().cast(),
-            GL_STATIC_DRAW,
-        );
-    }
-
     unsafe {
         glVertexAttribPointer(
             0,        // Has to match the shader program later on
             3,        // Number of components in the attribute
             GL_FLOAT, // Element type of the data in the attribute
             0,        // normalized
-            ((2 * 3 + 2) * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
+            ((3 + 2) * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
             0 as *const _, // Start of the vertext attribute within the buffer
         );
         glEnableVertexAttribArray(0);
 
         glVertexAttribPointer(
             1,
-            3,
+            2,
             GL_FLOAT,
             0,
-            ((2 * 3 + 2) * mem::size_of::<f32>()).try_into().unwrap(),
+            ((3 + 2) * mem::size_of::<f32>()).try_into().unwrap(),
             (3 * mem::size_of::<f32>()) as *const _,
         );
         glEnableVertexAttribArray(1);
-
-        glVertexAttribPointer(
-            2,
-            2,
-            GL_FLOAT,
-            0,
-            ((2 * 3 + 2) * mem::size_of::<f32>()).try_into().unwrap(),
-            (6 * mem::size_of::<f32>()) as *const _,
-        );
-        glEnableVertexAttribArray(2);
     }
 
     glBindVertexArray(0);
@@ -255,12 +248,6 @@ fn main() {
     }
     unsafe {
         glDisableVertexAttribArray(1);
-    }
-    unsafe {
-        glDisableVertexAttribArray(2);
-    }
-    unsafe {
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
     unsafe {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -279,20 +266,17 @@ fn main() {
 
     const VERT_SHADER: &str = r#"#version 330 core
         layout (location = 0) in vec3 pos;
-        layout (location = 1) in vec3 color;
-        layout (location = 2) in vec2 textureCoord;
+        layout (location = 1) in vec2 textureCoord;
 
         uniform mat4 model;
         uniform mat4 view;
         uniform mat4 projection;
 
-        out vec4 vertexColor;
         out vec2 texCoord;
 
         void main() {
             //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
             gl_Position = projection * view * model * vec4(pos, 1.0);
-            vertexColor = vec4(color, 1.0);
             texCoord = textureCoord;
         }
     "#;
@@ -305,7 +289,6 @@ fn main() {
         uniform sampler2D texture1;
         uniform sampler2D texture2;
 
-        in vec4 vertexColor;
         in vec2 texCoord;
 
         void main() {
@@ -361,6 +344,19 @@ fn main() {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }*/
 
+    // CUBE POSITIONS
+    let cube_positions = vec![
+        glam::vec3(0.0, 0.0, 0.0),
+        glam::vec3(2.0, 5.0, -15.0),
+        glam::vec3(1.0, 3.0, -2.0),
+        glam::vec3(3.0, -2.0, -10.0),
+        glam::vec3(-2.4, 3.0, -3.0),
+        glam::vec3(-1.3, -2.5, -11.0),
+        glam::vec3(1.0, 0.5, -8.0),
+        glam::vec3(-1.5, 1.0, -4.0),
+    ];
+
+
     let now = SystemTime::now();
 
     glUseProgram(program);
@@ -388,6 +384,8 @@ fn main() {
     let location_projection = unsafe {glGetUniformLocation(program, projection.as_ptr().cast())};
     assert!(location_projection >= 0);
 
+    unsafe { glEnable(GL_DEPTH_TEST) };
+
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
         // Handle events this frame
@@ -402,7 +400,7 @@ fn main() {
         // Here is the spot to change the world state and draw
 
         unsafe {
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
             //glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -415,35 +413,30 @@ fn main() {
 
             // Compute matrix
 
-            //let rotation_matrix = glam::Mat4::from_rotation_z(std::f32::consts::PI/2.0);
-            let mut model_matrix = glam::Mat4::IDENTITY;
-            model_matrix = model_matrix * glam::Mat4::from_rotation_x(-PI/3.0);
-            glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
+            let time_value = now.elapsed().unwrap().as_secs_f32();
+
+
+            //glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
 
             let mut view_matrix = glam::Mat4::IDENTITY;
-            view_matrix = view_matrix * glam::Mat4::from_translation(glam::Vec3::new(0.0, 0.0, -3.0));
+            view_matrix = view_matrix * glam::Mat4::from_translation(glam::Vec3::new(-4.0, -5.0, -3.0));
             glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
 
             let mut projection_matrix = glam::Mat4::IDENTITY;
-            projection_matrix = projection_matrix * glam::Mat4::perspective_rh_gl(PI/4.0, 800.0/600.0, 0.1, 100.0);
+            projection_matrix = projection_matrix * glam::Mat4::perspective_rh_gl(PI/2.0, 800.0/600.0, 0.1, 100.0);
             glUniformMatrix4fv(location_projection, 1, 0, projection_matrix.to_cols_array().as_ptr());
 
             glBindVertexArray(vao);
 
-            /*let time_value = now.elapsed().unwrap().as_secs_f32();
-            let green_value = f32::sin(time_value) / 2.0 + 0.5;
+            for i in 0..cube_positions.len() {
+                let model_matrix = glam::Mat4::from_translation(cube_positions[i]) * glam::Mat4::from_rotation_x(-PI/3.0 * time_value);
+                glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
 
-            let uniform_name = CString::new("ourColor").unwrap();
-            let vertex_color_location = glGetUniformLocation(program, uniform_name.as_ptr().cast());
-            assert!(vertex_color_location >= 0);
-            glUniform4f(vertex_color_location, 0.0, green_value, 0.0, 1.0);*/
+                glDrawArrays(GL_TRIANGLES, 0, 36);    
+            }
 
-            glDrawElements(
-                GL_TRIANGLES,
-                indices.len() as i32,
-                GL_UNSIGNED_INT,
-                0 as *const _,
-            );
+            //glDrawArrays(GL_TRIANGLES, 0, 36);
+
             win.swap_window();
         }
     }
