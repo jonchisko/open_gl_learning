@@ -1,7 +1,7 @@
 // Make it windows and not console app. Doesnt open the terminal
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use beryllium::*;
+use beryllium::{events::{SDLK_a, SDLK_d, SDLK_s, SDLK_w, SDLK_6, SDLK_UP}, *};
 use gl33::{
     global_loader::{
         glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnable, glEnableVertexAttribArray, glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri, glUniform1i, glUniform4f, glUniformMatrix4fv, glUseProgram, glVertexAttribPointer, load_global_gl
@@ -71,6 +71,7 @@ fn main() {
     sdl.set_gl_context_minor_version(3).unwrap();
     // Core is a subset of all the features the OpenGL provides
     sdl.set_gl_profile(video::GlProfile::Core).unwrap();
+    sdl.set_relative_mouse_mode(true).unwrap();
     #[cfg(target_os = "macos")]
     {
         // For Mac OS -> FC basically makes all deperecated but available functions unavailable
@@ -93,7 +94,7 @@ fn main() {
     let win = sdl
         .create_gl_window(win_args)
         .expect("Could not make a window and context.");
-
+    
     // Load up every OpenGL function
     unsafe {
         load_global_gl(&|f_name| win.get_proc_address(f_name));
@@ -386,12 +387,68 @@ fn main() {
 
     unsafe { glEnable(GL_DEPTH_TEST) };
 
+    let mut delta_time = 0.0;
+    let mut last_frame = 0.0;
+
+    let camera_speed = 10.0;
+    let mut camera_front = glam::Vec3::new(0.0, 0.0, -1.0);
+    let mut camera_pos = glam::Vec3::new(0.0, 0.0, 0.0);
+    let global_up = glam::Vec3::new(0.0, 1.0, 0.0);
+
+    let mut yaw = 0.0;
+    let mut pitch = 0.0;
+    let mut fov = 45.0;
+
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
+
+        // DELTA TIME
+        let current_frame = now.elapsed().unwrap().as_secs_f32();
+        delta_time = current_frame - last_frame;
+        last_frame = current_frame;
+
         // Handle events this frame
         while let Some(event) = sdl.poll_events() {
             match event {
                 (events::Event::Quit, _) => break 'main_loop,
+                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_w, modifiers: _ }, _) => {
+                    camera_pos += camera_front * camera_speed * delta_time;
+                },
+                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_s, modifiers: _ }, _) => {
+                    camera_pos -= camera_front * camera_speed * delta_time;
+                },
+                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_a, modifiers: _ }, _) => {
+                    camera_pos -= camera_front.cross(global_up).normalize() * camera_speed * delta_time;
+                },
+                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_d, modifiers: _ }, _) => {
+                    camera_pos += camera_front.cross(global_up).normalize() * camera_speed * delta_time;
+                },
+                (events::Event::MouseMotion { win_id: _, mouse_id: _, button_state: _, x_win, y_win, x_delta, y_delta }, _) => {
+                    yaw += x_delta as f32 * 0.1;
+                    pitch -= y_delta as f32 * 0.1;
+
+                    if pitch >= 89.0 {
+                        pitch = 89.0;
+                    }
+                    if pitch <= -89.0 {
+                        pitch = -89.0;
+                    }
+
+                    let mut look_direction = glam::Vec3::ZERO;
+                    look_direction.x = yaw.to_radians().cos() * pitch.to_radians().cos();
+                    look_direction.y = pitch.to_radians().sin();
+                    look_direction.z = yaw.to_radians().sin() * pitch.to_radians().cos();
+                    camera_front = look_direction.normalize();
+                },
+                (events::Event::MouseWheel { win_id: _, mouse_id: _, x: _, y }, _) => {
+                    fov -= y as f32;
+                    if fov < 1.0 {
+                        fov = 1.0;
+                    }
+                    if fov > 45.0 {
+                        fov = 45.0
+                    }
+                },
                 _ => (),
             }
         }
@@ -420,16 +477,8 @@ fn main() {
 
             // CAMERA SETUP
 
-            // rotate camera around (ORBIT)
-            let radius = 10.0;
-            let cam_x = time_value.sin() * radius;
-            let cam_z = time_value.cos() * radius;
-
-            let camera_pos = glam::Vec3::new(cam_x, 0.0, cam_z);
-            let camera_target = glam::vec3(0.0, 0.0, 0.0);
+            let camera_target = camera_pos + camera_front;
             let camera_direction = (camera_pos - camera_target).normalize();
-
-            let global_up = glam::Vec3::new(0.0, 1.0, 0.0);
             let camera_right = global_up.cross(camera_direction).normalize();
 
             let camera_up = camera_direction.cross(camera_right);
@@ -444,7 +493,7 @@ fn main() {
             glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
 
             let mut projection_matrix = glam::Mat4::IDENTITY;
-            projection_matrix = projection_matrix * glam::Mat4::perspective_rh_gl(PI/4.0, 800.0/600.0, 0.1, 100.0);
+            projection_matrix = projection_matrix * glam::Mat4::perspective_rh_gl(fov.to_radians(), 800.0/600.0, 0.1, 100.0);
             glUniformMatrix4fv(location_projection, 1, 0, projection_matrix.to_cols_array().as_ptr());
 
             glBindVertexArray(vao);
