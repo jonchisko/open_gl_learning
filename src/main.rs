@@ -102,7 +102,7 @@ fn main() {
 
     unsafe { glClearColor(0.2, 0.3, 0.3, 1.0) };
 
-    // VERTEX ARRAY OBJECT
+    /*// VERTEX ARRAY OBJECT
 
     let mut vao = 0u32;
     unsafe {
@@ -517,7 +517,7 @@ fn main() {
         glDeleteBuffers(1, &vbo);
 
         glDeleteProgram(program);
-    }
+    }*/
 }
 
 fn log_error(object_id: u32, is_shader: bool) -> () {
