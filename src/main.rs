@@ -1,65 +1,74 @@
 // Make it windows and not console app. Doesnt open the terminal
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use beryllium::{events::{SDLK_a, SDLK_d, SDLK_s, SDLK_w, SDLK_6, SDLK_UP}, *};
+use beryllium::{
+    events::{SDLK_a, SDLK_d, SDLK_s, SDLK_w, SDLK_6, SDLK_UP},
+    *,
+};
 use gl33::{
     global_loader::{
-        glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray, glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader, glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays, glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnable, glEnableVertexAttribArray, glGenBuffers, glGenTextures, glGenVertexArrays, glGenerateMipmap, glGetIntegerv, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog, glGetShaderiv, glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D, glTexParameteri, glUniform1i, glUniform4f, glUniformMatrix4fv, glUseProgram, glVertexAttribPointer, load_global_gl
+        glActiveTexture, glAttachShader, glBindBuffer, glBindTexture, glBindVertexArray,
+        glBufferData, glClear, glClearColor, glCompileShader, glCreateProgram, glCreateShader,
+        glDeleteBuffers, glDeleteProgram, glDeleteShader, glDeleteVertexArrays,
+        glDisableVertexAttribArray, glDrawArrays, glDrawElements, glEnable,
+        glEnableVertexAttribArray, glGenBuffers, glGenTextures, glGenVertexArrays,
+        glGenerateMipmap, glGetIntegerv, glGetProgramInfoLog, glGetProgramiv, glGetShaderInfoLog,
+        glGetShaderiv, glGetUniformLocation, glLinkProgram, glShaderSource, glTexImage2D,
+        glTexParameteri, glUniform1i, glUniform3f, glUniform4f, glUniformMatrix4fv, glUseProgram,
+        glVertexAttribPointer, load_global_gl,
     },
     *,
 };
-use glam::vec4;
+use glam::{vec4, Vec4, Vec4Swizzles};
 
 use std::{
-    f32::consts::PI, ffi::CString, mem, time::SystemTime
+    f32::consts::PI,
+    ffi::{CStr, CString},
+    mem,
+    time::SystemTime,
 };
 
 use image::ImageReader;
 
 #[rustfmt::skip]
-fn get_vertices() -> [f32; 180] {
+fn get_vertices() -> [f32; 108] {
     [ // I coppied the data from learnopengl, 1.5 -> 1.0 and 0.5 to 0.0 but i am too lazy
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-     0.5, -0.5, -0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-
-    -0.5, -0.5,  0.5,  0.5, 0.5,
-     0.5, -0.5,  0.5,  1.5, 0.5,
-     0.5,  0.5,  0.5,  1.5, 1.5,
-     0.5,  0.5,  0.5,  1.5, 1.5,
-    -0.5,  0.5,  0.5,  0.5, 1.5,
-    -0.5, -0.5,  0.5,  0.5, 0.5,
-
-    -0.5,  0.5,  0.5,  1.5, 0.5,
-    -0.5,  0.5, -0.5,  1.5, 1.5,
-    -0.5, -0.5, -0.5,  0.5, 1.5,
-    -0.5, -0.5, -0.5,  0.5, 1.5,
-    -0.5, -0.5,  0.5,  0.5, 0.5,
-    -0.5,  0.5,  0.5,  1.5, 0.5,
-
-     0.5,  0.5,  0.5,  1.5, 0.5,
-     0.5,  0.5, -0.5,  1.5, 1.5,
-     0.5, -0.5, -0.5,  0.5, 1.5,
-     0.5, -0.5, -0.5,  0.5, 1.5,
-     0.5, -0.5,  0.5,  0.5, 0.5,
-     0.5,  0.5,  0.5,  1.5, 0.5,
-
-    -0.5, -0.5, -0.5,  0.5, 1.5,
-     0.5, -0.5, -0.5,  1.5, 1.5,
-     0.5, -0.5,  0.5,  1.5, 0.5,
-     0.5, -0.5,  0.5,  1.5, 0.5,
-    -0.5, -0.5,  0.5,  0.5, 0.5,
-    -0.5, -0.5, -0.5,  0.5, 1.5,
-
-    -0.5,  0.5, -0.5,  0.5, 1.5,
-     0.5,  0.5, -0.5,  1.5, 1.5,
-     0.5,  0.5,  0.5,  1.5, 0.5,
-     0.5,  0.5,  0.5,  1.5, 0.5,
-    -0.5,  0.5,  0.5,  0.5, 0.5,
-    -0.5,  0.5, -0.5,  0.5, 1.5
+    -0.5, -0.5, -0.5,
+     0.5, -0.5, -0.5,
+     0.5,  0.5, -0.5,
+     0.5,  0.5, -0.5,
+    -0.5,  0.5, -0.5,
+    -0.5, -0.5, -0.5,
+    -0.5, -0.5,  0.5,
+     0.5, -0.5,  0.5,
+     0.5,  0.5,  0.5,
+     0.5,  0.5,  0.5,
+    -0.5,  0.5,  0.5,
+    -0.5, -0.5,  0.5,
+    -0.5,  0.5,  0.5,
+    -0.5,  0.5, -0.5,
+    -0.5, -0.5, -0.5,
+    -0.5, -0.5, -0.5,
+    -0.5, -0.5,  0.5,
+    -0.5,  0.5,  0.5,
+     0.5,  0.5,  0.5,
+     0.5,  0.5, -0.5,
+     0.5, -0.5, -0.5,
+     0.5, -0.5, -0.5,
+     0.5, -0.5,  0.5,
+     0.5,  0.5,  0.5,
+    -0.5, -0.5, -0.5,
+     0.5, -0.5, -0.5,
+     0.5, -0.5,  0.5,
+     0.5, -0.5,  0.5,
+    -0.5, -0.5,  0.5,
+    -0.5, -0.5, -0.5,
+    -0.5,  0.5, -0.5,
+     0.5,  0.5, -0.5,
+     0.5,  0.5,  0.5,
+     0.5,  0.5,  0.5,
+    -0.5,  0.5,  0.5,
+    -0.5,  0.5, -0.5,
     ]
 }
 
@@ -71,7 +80,7 @@ fn main() {
     sdl.set_gl_context_minor_version(3).unwrap();
     // Core is a subset of all the features the OpenGL provides
     sdl.set_gl_profile(video::GlProfile::Core).unwrap();
-    sdl.set_relative_mouse_mode(true).unwrap();
+    //sdl.set_relative_mouse_mode(true).unwrap();
     #[cfg(target_os = "macos")]
     {
         // For Mac OS -> FC basically makes all deperecated but available functions unavailable
@@ -94,15 +103,13 @@ fn main() {
     let win = sdl
         .create_gl_window(win_args)
         .expect("Could not make a window and context.");
-    
+
     // Load up every OpenGL function
     unsafe {
         load_global_gl(&|f_name| win.get_proc_address(f_name));
     }
 
     unsafe { glClearColor(0.2, 0.3, 0.3, 1.0) };
-
-    // VERTEX ARRAY OBJECT
 
     let mut vao = 0u32;
     unsafe {
@@ -113,149 +120,61 @@ fn main() {
 
     let vertices = get_vertices();
 
-    // Load texture image
-    let wooden_crate_texture = ImageReader::open("./assets/wall.jpg")
-        .expect("Could not open image")
-        .decode()
-        .expect("Could not decode the image");
-    let (wooden_width, wooden_height) =
-        (wooden_crate_texture.width(), wooden_crate_texture.height());
-    let wooden_crate_texture = wooden_crate_texture.as_bytes();
-
-    let face_texture = ImageReader::open("./assets/awesomeface.png")
-        .expect("Could not open image")
-        .decode()
-        .expect("Could not decode the image");
-    let (face_width, face_height) = (face_texture.width(), face_texture.height());
-    let face_texture = face_texture.as_bytes();
-
-    // TEXTURE GENERATION
-    let mut texture_wooden_crate = 0u32;
-    unsafe { glGenTextures(1, &mut texture_wooden_crate) };
-    assert!(texture_wooden_crate != 0);
-    unsafe { glBindTexture(GL_TEXTURE_2D, texture_wooden_crate) };
-
-    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT.0 as i32) };
-    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT.0 as i32) };
-    unsafe {
-        glTexParameteri(
-            GL_TEXTURE_2D,
-            GL_TEXTURE_MIN_FILTER,
-            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
-        )
-    }
-    unsafe { glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32) }
-
-    unsafe {
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGB.0 as i32, // format in the opengl/gpu
-            wooden_width as i32,
-            wooden_height as i32,
-            0,
-            GL_RGB, // original format, so our byte slice
-            GL_UNSIGNED_BYTE,
-            wooden_crate_texture.as_ptr().cast(),
-        );
-    }
-    unsafe {
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    unsafe {
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
-
-    // Face texture
-    let mut texture_face = 0u32;
-    unsafe {
-        glGenTextures(1, &mut texture_face);
-    }
-    assert!(texture_face != 0);
-    unsafe {
-        glBindTexture(GL_TEXTURE_2D, texture_face);
-    }
-
-    unsafe {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT.0 as i32);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT.0 as i32);
-        glTexParameteri(
-            GL_TEXTURE_2D,
-            GL_TEXTURE_MIN_FILTER,
-            GL_LINEAR_MIPMAP_LINEAR.0 as i32,
-        );
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
-    }
-
-    unsafe {
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGB.0 as i32,
-            face_width as i32,
-            face_height as i32,
-            0,
-            GL_RGBA,
-            GL_UNSIGNED_BYTE,
-            face_texture.as_ptr().cast(),
-        );
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
-
-    // VERTEX BUFFER OBJECT
-
     let mut vbo = 0u32;
     unsafe {
         glGenBuffers(1, &mut vbo);
     }
     assert!(vbo != 0);
-    unsafe { glBindBuffer(GL_ARRAY_BUFFER, vbo) };
     unsafe {
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(
             GL_ARRAY_BUFFER,
-            (vertices.len() * mem::size_of::<f32>()).try_into().unwrap(),
+            (std::mem::size_of::<f32>() * vertices.len())
+                .try_into()
+                .unwrap(),
             vertices.as_ptr().cast(),
-            GL_STATIC_DRAW,
+            GL_STATIC_READ,
         )
     };
 
     unsafe {
         glVertexAttribPointer(
-            0,        // Has to match the shader program later on
-            3,        // Number of components in the attribute
-            GL_FLOAT, // Element type of the data in the attribute
-            0,        // normalized
-            ((3 + 2) * mem::size_of::<f32>()).try_into().unwrap(), // Size in bytes of all the attributes, currently 3 * 4 bytes
-            0 as *const _, // Start of the vertext attribute within the buffer
-        );
-        glEnableVertexAttribArray(0);
-
-        glVertexAttribPointer(
-            1,
-            2,
+            0,
+            3,
             GL_FLOAT,
             0,
-            ((3 + 2) * mem::size_of::<f32>()).try_into().unwrap(),
-            (3 * mem::size_of::<f32>()) as *const _,
+            (3 * std::mem::size_of::<f32>()).try_into().unwrap(),
+            0 as *const _,
         );
-        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(0);
     }
 
     glBindVertexArray(0);
+
+    // Setup Light Source Object
+    let mut vao_light_source = 0u32;
     unsafe {
-        glDisableVertexAttribArray(0);
+        glGenVertexArrays(1, &mut vao_light_source);
     }
+    assert!(vao_light_source != 0);
+    glBindVertexArray(vao_light_source);
+
+    unsafe { glBindBuffer(GL_ARRAY_BUFFER, vbo) };
     unsafe {
-        glDisableVertexAttribArray(1);
+        glVertexAttribPointer(
+            0,
+            3,
+            GL_FLOAT,
+            0,
+            (3 * std::mem::size_of::<f32>()).try_into().unwrap(),
+            0 as *const _,
+        );
+        glEnableVertexAttribArray(0);
     }
-    unsafe {
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
+
+    glBindVertexArray(0);
 
     // SHADERS
-
     let mut max_attribute_number = 0i32;
     unsafe {
         glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &mut max_attribute_number);
@@ -267,35 +186,33 @@ fn main() {
 
     const VERT_SHADER: &str = r#"#version 330 core
         layout (location = 0) in vec3 pos;
-        layout (location = 1) in vec2 textureCoord;
 
         uniform mat4 model;
         uniform mat4 view;
         uniform mat4 projection;
 
-        out vec2 texCoord;
-
         void main() {
-            //gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
             gl_Position = projection * view * model * vec4(pos, 1.0);
-            texCoord = textureCoord;
         }
     "#;
 
     const FRAG_SHADER: &str = r#"#version 330 core
-        out vec4 final_color;
+        out vec4 frag_color;
 
-        //uniform vec4 ourColor;
-        // built in datatype for texture objects
-        uniform sampler2D texture1;
-        uniform sampler2D texture2;
-
-        in vec2 texCoord;
+        uniform vec3 object_color;
+        uniform vec3 light_color;
 
         void main() {
-            final_color = mix(texture(texture1, texCoord), texture(texture2, vec2(texCoord.x, 1.0 - texCoord.y)), 0.2);
-            //final_color = texture(texture1, texCoord) * vertexColor;
-            //final_color = ourColor;
+            frag_color = vec4(light_color * object_color, 1.0);
+        }
+    
+    "#;
+
+    const FRAG_SHADER_LIGHT_SOURCE: &str = r#"#version 330 core
+        out vec4 frag_color;
+
+        void main() {
+            frag_color = vec4(1.0);
         }
     "#;
 
@@ -308,7 +225,7 @@ fn main() {
             &(VERT_SHADER.as_bytes().as_ptr().cast()),
             &(VERT_SHADER.len().try_into().unwrap()),
         );
-    };
+    }
     glCompileShader(vertex_shader);
     log_error(vertex_shader, true);
 
@@ -325,134 +242,182 @@ fn main() {
     glCompileShader(fragment_shader);
     log_error(fragment_shader, true);
 
-    // PROGRAM
-    let program = glCreateProgram();
-    assert!(program != 0);
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-    log_error(program, false);
+    let fragment_shader_light_source = glCreateShader(GL_FRAGMENT_SHADER);
+    assert!(fragment_shader_light_source != 0);
+    unsafe {
+        glShaderSource(
+            fragment_shader_light_source,
+            1,
+            &(FRAG_SHADER_LIGHT_SOURCE.as_bytes().as_ptr().cast()),
+            &(FRAG_SHADER_LIGHT_SOURCE.len().try_into().unwrap()),
+        );
+    }
+    glCompileShader(fragment_shader_light_source);
+    log_error(fragment_shader_light_source, true);
+
+    let program_object = glCreateProgram();
+    assert!(program_object != 0);
+    glAttachShader(program_object, vertex_shader);
+    glAttachShader(program_object, fragment_shader);
+    glLinkProgram(program_object);
+    log_error(program_object, false);
+
+    let program_light = glCreateProgram();
+    assert!(program_light != 0);
+    glAttachShader(program_light, vertex_shader);
+    glAttachShader(program_light, fragment_shader_light_source);
+    glLinkProgram(program_light);
+    log_error(program_light, false);
 
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
+    glDeleteShader(fragment_shader_light_source);
 
-    // Enable vsync - swap_window blocks until the image has been presented to the user
-    // So we show images at most as fast the display's refresh rate
     let _ = win.set_swap_interval(video::GlSwapInterval::Vsync);
 
-    // Wireframe mode
-    /*unsafe {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    }*/
+    glUseProgram(program_object);
 
-    // CUBE POSITIONS
-    let cube_positions = vec![
-        glam::vec3(0.0, 0.0, 0.0),
-        glam::vec3(2.0, 5.0, -15.0),
-        glam::vec3(1.0, 3.0, -2.0),
-        glam::vec3(3.0, -2.0, -10.0),
-        glam::vec3(-2.4, 3.0, -3.0),
-        glam::vec3(-1.3, -2.5, -11.0),
-        glam::vec3(1.0, 0.5, -8.0),
-        glam::vec3(-1.5, 1.0, -4.0),
-    ];
+    let object_color = CString::new("object_color").unwrap();
+    let light_color = CString::new("light_color").unwrap();
 
+    let location_object_color =
+        unsafe { glGetUniformLocation(program_object, object_color.as_ptr().cast()) };
+    let location_light_color =
+        unsafe { glGetUniformLocation(program_object, light_color.as_ptr().cast()) };
+    assert!(location_object_color >= 0);
+    assert!(location_light_color >= 0);
 
-    let now = SystemTime::now();
-
-    glUseProgram(program);
-    let texture1 = CString::new("texture1").unwrap();
-    let texture2 = CString::new("texture2").unwrap();
-
-    let location_texture1 = unsafe { glGetUniformLocation(program, texture1.as_ptr().cast()) };
-    let location_texture2 = unsafe { glGetUniformLocation(program, texture2.as_ptr().cast()) };
-    assert!(location_texture1 >= 0);
-    assert!(location_texture2 >= 0);
     unsafe {
-        glUniform1i(location_texture1, 0);
-        glUniform1i(location_texture2, 1);
+        glUniform3f(location_object_color, 1.0, 0.5, 0.31);
+        glUniform3f(location_light_color, 1.0, 1.0, 1.0);
     }
 
-    let model = CString::new("model").unwrap();
-    let location_model = unsafe { glGetUniformLocation(program, model.as_ptr().cast()) };
-    assert!(location_model >= 0);
+    unsafe {
+        glEnable(GL_DEPTH_TEST);
+    }
 
-    let view = CString::new("view").unwrap();
-    let location_view = unsafe { glGetUniformLocation(program, view.as_ptr().cast())};
-    assert!(location_view >= 0);
+    'main: loop {
+        while let Some(event) = sdl.poll_events() {
+            match event {
+                (events::Event::Quit, _) => break 'main,
+                _ => (),
+            }
 
-    let projection = CString::new("projection").unwrap();
-    let location_projection = unsafe {glGetUniformLocation(program, projection.as_ptr().cast())};
-    assert!(location_projection >= 0);
+            unsafe {
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    unsafe { glEnable(GL_DEPTH_TEST) };
+                glUseProgram(program_object);
 
-    let mut delta_time = 0.0;
-    let mut last_frame = 0.0;
+                let model = CString::new("model").unwrap();
+                let view = CString::new("view").unwrap();
+                let projection = CString::new("projection").unwrap();
 
-    let camera_speed = 10.0;
-    let mut camera_front = glam::Vec3::new(0.0, 0.0, -1.0);
-    let mut camera_pos = glam::Vec3::new(0.0, 0.0, 0.0);
-    let global_up = glam::Vec3::new(0.0, 1.0, 0.0);
+                let location_model =
+                    unsafe { glGetUniformLocation(program_object, model.as_ptr().cast()) };
+                let location_view =
+                    unsafe { glGetUniformLocation(program_object, view.as_ptr().cast()) };
+                let location_projection =
+                    unsafe { glGetUniformLocation(program_object, projection.as_ptr().cast()) };
+                assert!(location_model >= 0);
+                assert!(location_view >= 0);
+                assert!(location_projection >= 0);
 
-    let mut yaw = 0.0;
-    let mut pitch = 0.0;
-    let mut fov = 45.0;
+                let position = glam::Vec3::new(-2.0, 1.0, 2.0);
+                let translation = glam::Mat4::from_translation(position);
+                let rotation = glam::Mat4::IDENTITY;
+                let scale = glam::Mat4::IDENTITY * 4.0;
+                let model_matrix = translation * rotation * scale;
+                glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
+
+                // CAMERA SETUP
+                let view_matrix = glam::Mat4::look_at_rh(
+                    glam::Vec3::new(0.0, 2.0, -10.0),
+                    glam::Vec3::new(0.0, 0.0, 0.0),
+                    glam::Vec3::new(0.0, 1.0, 0.0),
+                );
+                glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
+
+                let mut projection_matrix = glam::Mat4::perspective_rh_gl(
+                    (45.0f32).to_radians(),
+                    800.0 / 600.0,
+                    0.1,
+                    100.0,
+                );
+                glUniformMatrix4fv(
+                    location_projection,
+                    1,
+                    0,
+                    projection_matrix.to_cols_array().as_ptr(),
+                );
+
+                glBindVertexArray(vao);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+
+                glUseProgram(program_light);
+
+                let model = CString::new("model").unwrap();
+                let view = CString::new("view").unwrap();
+                let projection = CString::new("projection").unwrap();
+
+                let location_model =
+                    unsafe { glGetUniformLocation(program_light, model.as_ptr().cast()) };
+                let location_view =
+                    unsafe { glGetUniformLocation(program_light, view.as_ptr().cast()) };
+                let location_projection =
+                    unsafe { glGetUniformLocation(program_light, projection.as_ptr().cast()) };
+                assert!(location_model >= 0);
+                assert!(location_view >= 0);
+                assert!(location_projection >= 0);
+
+                let position = glam::Vec3::new(2.0, -1.0, 0.0);
+                let translation = glam::Mat4::from_translation(position);
+
+                let rotation = glam::Mat4::IDENTITY;
+                let scale = glam::Mat4::IDENTITY * 1.0;
+                let model_matrix = translation * rotation * scale;
+                glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
+                // CAMERA SETUP
+                let view_matrix = glam::Mat4::look_at_rh(
+                    glam::Vec3::new(0.0, 2.0, -10.0),
+                    glam::Vec3::new(0.0, 0.0, 0.0),
+                    glam::Vec3::new(0.0, 1.0, 0.0),
+                );
+                glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
+
+                let mut projection_matrix = glam::Mat4::perspective_rh_gl(
+                    (45.0f32).to_radians(),
+                    800.0 / 600.0,
+                    0.1,
+                    100.0,
+                );
+                glUniformMatrix4fv(
+                    location_projection,
+                    1,
+                    0,
+                    projection_matrix.to_cols_array().as_ptr(),
+                );
+
+                glBindVertexArray(vao_light_source);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+
+                win.swap_window();
+            }
+        }
+    }
+
+    unsafe {
+        glDeleteVertexArrays(1, &vao);
+        glDeleteVertexArrays(1, &vao_light_source);
+        glDeleteBuffers(1, &vbo);
+        glDeleteProgram(program_light);
+        glDeleteProgram(program_object);
+    }
+
+    /*
+
 
     // Processing events - we have to, OS otherwise thinks the application has stalled
     'main_loop: loop {
-
-        // DELTA TIME
-        let current_frame = now.elapsed().unwrap().as_secs_f32();
-        delta_time = current_frame - last_frame;
-        last_frame = current_frame;
-
-        // Handle events this frame
-        while let Some(event) = sdl.poll_events() {
-            match event {
-                (events::Event::Quit, _) => break 'main_loop,
-                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_w, modifiers: _ }, _) => {
-                    camera_pos += camera_front * camera_speed * delta_time;
-                },
-                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_s, modifiers: _ }, _) => {
-                    camera_pos -= camera_front * camera_speed * delta_time;
-                },
-                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_a, modifiers: _ }, _) => {
-                    camera_pos -= camera_front.cross(global_up).normalize() * camera_speed * delta_time;
-                },
-                (events::Event::Key { win_id: _, pressed: true, repeat: _, scancode: _, keycode: SDLK_d, modifiers: _ }, _) => {
-                    camera_pos += camera_front.cross(global_up).normalize() * camera_speed * delta_time;
-                },
-                (events::Event::MouseMotion { win_id: _, mouse_id: _, button_state: _, x_win, y_win, x_delta, y_delta }, _) => {
-                    yaw += x_delta as f32 * 0.1;
-                    pitch -= y_delta as f32 * 0.1;
-
-                    if pitch >= 89.0 {
-                        pitch = 89.0;
-                    }
-                    if pitch <= -89.0 {
-                        pitch = -89.0;
-                    }
-
-                    let mut look_direction = glam::Vec3::ZERO;
-                    look_direction.x = yaw.to_radians().cos() * pitch.to_radians().cos();
-                    look_direction.y = pitch.to_radians().sin();
-                    look_direction.z = yaw.to_radians().sin() * pitch.to_radians().cos();
-                    camera_front = look_direction.normalize();
-                },
-                (events::Event::MouseWheel { win_id: _, mouse_id: _, x: _, y }, _) => {
-                    fov -= y as f32;
-                    if fov < 1.0 {
-                        fov = 1.0;
-                    }
-                    if fov > 45.0 {
-                        fov = 45.0
-                    }
-                },
-                _ => (),
-            }
-        }
-        // Now events are clear
 
         // Here is the spot to change the world state and draw
 
@@ -502,7 +467,7 @@ fn main() {
                 let model_matrix = glam::Mat4::from_translation(cube_positions[i]) * glam::Mat4::from_rotation_x(-PI/3.0 * time_value);
                 glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
 
-                glDrawArrays(GL_TRIANGLES, 0, 36);    
+                glDrawArrays(GL_TRIANGLES, 0, 36);
             }
 
             //glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -517,7 +482,7 @@ fn main() {
         glDeleteBuffers(1, &vbo);
 
         glDeleteProgram(program);
-    }
+    }*/
 }
 
 fn log_error(object_id: u32, is_shader: bool) -> () {
