@@ -31,44 +31,49 @@ use std::{
 use image::ImageReader;
 
 #[rustfmt::skip]
-fn get_vertices() -> [f32; 108] {
+fn get_vertices() -> [f32; 216] {
     [ // I coppied the data from learnopengl, 1.5 -> 1.0 and 0.5 to 0.0 but i am too lazy
-    -0.5, -0.5, -0.5,
-     0.5, -0.5, -0.5,
-     0.5,  0.5, -0.5,
-     0.5,  0.5, -0.5,
-    -0.5,  0.5, -0.5,
-    -0.5, -0.5, -0.5,
-    -0.5, -0.5,  0.5,
-     0.5, -0.5,  0.5,
-     0.5,  0.5,  0.5,
-     0.5,  0.5,  0.5,
-    -0.5,  0.5,  0.5,
-    -0.5, -0.5,  0.5,
-    -0.5,  0.5,  0.5,
-    -0.5,  0.5, -0.5,
-    -0.5, -0.5, -0.5,
-    -0.5, -0.5, -0.5,
-    -0.5, -0.5,  0.5,
-    -0.5,  0.5,  0.5,
-     0.5,  0.5,  0.5,
-     0.5,  0.5, -0.5,
-     0.5, -0.5, -0.5,
-     0.5, -0.5, -0.5,
-     0.5, -0.5,  0.5,
-     0.5,  0.5,  0.5,
-    -0.5, -0.5, -0.5,
-     0.5, -0.5, -0.5,
-     0.5, -0.5,  0.5,
-     0.5, -0.5,  0.5,
-    -0.5, -0.5,  0.5,
-    -0.5, -0.5, -0.5,
-    -0.5,  0.5, -0.5,
-     0.5,  0.5, -0.5,
-     0.5,  0.5,  0.5,
-     0.5,  0.5,  0.5,
-    -0.5,  0.5,  0.5,
-    -0.5,  0.5, -0.5,
+    -0.5, -0.5, -0.5,  0.5,  0.5, -1.5,
+     0.5, -0.5, -0.5,  0.5,  0.5, -1.5, 
+     0.5,  0.5, -0.5,  0.5,  0.5, -1.5, 
+     0.5,  0.5, -0.5,  0.5,  0.5, -1.5, 
+    -0.5,  0.5, -0.5,  0.5,  0.5, -1.5, 
+    -0.5, -0.5, -0.5,  0.5,  0.5, -1.5, 
+
+    -0.5, -0.5,  0.5,  0.5,  0.5, 1.5,
+     0.5, -0.5,  0.5,  0.5,  0.5, 1.5,
+     0.5,  0.5,  0.5,  0.5,  0.5, 1.5,
+     0.5,  0.5,  0.5,  0.5,  0.5, 1.5,
+    -0.5,  0.5,  0.5,  0.5,  0.5, 1.5,
+    -0.5, -0.5,  0.5,  0.5,  0.5, 1.5,
+
+    -0.5,  0.5,  0.5, -1.5,  0.5,  0.5,
+    -0.5,  0.5, -0.5, -1.5,  0.5,  0.5,
+    -0.5, -0.5, -0.5, -1.5,  0.5,  0.5,
+    -0.5, -0.5, -0.5, -1.5,  0.5,  0.5,
+    -0.5, -0.5,  0.5, -1.5,  0.5,  0.5,
+    -0.5,  0.5,  0.5, -1.5,  0.5,  0.5,
+
+     0.5,  0.5,  0.5,  1.5,  0.5,  0.5,
+     0.5,  0.5, -0.5,  1.5,  0.5,  0.5,
+     0.5, -0.5, -0.5,  1.5,  0.5,  0.5,
+     0.5, -0.5, -0.5,  1.5,  0.5,  0.5,
+     0.5, -0.5,  0.5,  1.5,  0.5,  0.5,
+     0.5,  0.5,  0.5,  1.5,  0.5,  0.5,
+
+    -0.5, -0.5, -0.5,  0.5, -1.5,  0.5,
+     0.5, -0.5, -0.5,  0.5, -1.5,  0.5,
+     0.5, -0.5,  0.5,  0.5, -1.5,  0.5,
+     0.5, -0.5,  0.5,  0.5, -1.5,  0.5,
+    -0.5, -0.5,  0.5,  0.5, -1.5,  0.5,
+    -0.5, -0.5, -0.5,  0.5, -1.5,  0.5,
+
+    -0.5,  0.5, -0.5,  0.5,  1.5,  0.5,
+     0.5,  0.5, -0.5,  0.5,  1.5,  0.5,
+     0.5,  0.5,  0.5,  0.5,  1.5,  0.5,
+     0.5,  0.5,  0.5,  0.5,  1.5,  0.5,
+    -0.5,  0.5,  0.5,  0.5,  1.5,  0.5,
+    -0.5,  0.5, -0.5,  0.5,  1.5,  0.5
     ]
 }
 
@@ -109,7 +114,7 @@ fn main() {
         load_global_gl(&|f_name| win.get_proc_address(f_name));
     }
 
-    unsafe { glClearColor(0.2, 0.3, 0.3, 1.0) };
+    unsafe { glClearColor(0.1, 0.1, 0.1, 1.0) };
 
     let mut vao = 0u32;
     unsafe {
@@ -143,10 +148,20 @@ fn main() {
             3,
             GL_FLOAT,
             0,
-            (3 * std::mem::size_of::<f32>()).try_into().unwrap(),
+            (6 * std::mem::size_of::<f32>()).try_into().unwrap(),
             0 as *const _,
         );
         glEnableVertexAttribArray(0);
+
+        glVertexAttribPointer(
+            1,
+            3,
+            GL_FLOAT,
+            0,
+            (6 * std::mem::size_of::<f32>()).try_into().unwrap(),
+            (3 * std::mem::size_of::<f32>()) as *const _,
+        );
+        glEnableVertexAttribArray(1);
     }
 
     glBindVertexArray(0);
@@ -166,7 +181,7 @@ fn main() {
             3,
             GL_FLOAT,
             0,
-            (3 * std::mem::size_of::<f32>()).try_into().unwrap(),
+            (6 * std::mem::size_of::<f32>()).try_into().unwrap(),
             0 as *const _,
         );
         glEnableVertexAttribArray(0);
@@ -185,25 +200,59 @@ fn main() {
     );
 
     const VERT_SHADER: &str = r#"#version 330 core
-        layout (location = 0) in vec3 pos;
+        layout (location = 0) in vec3 a_pos;
+        layout (location = 1) in vec3 a_normal;
+
+        out vec3 normal;
+        out vec3 frag_position;
 
         uniform mat4 model;
         uniform mat4 view;
         uniform mat4 projection;
 
         void main() {
-            gl_Position = projection * view * model * vec4(pos, 1.0);
+            gl_Position = projection * view * model * vec4(a_pos, 1.0);
+
+            frag_position = (model * vec4(a_pos, 1.0)).xyz;
+            normal = mat3(transpose(inverse(model))) * a_normal; // better of on the cpu and set via uniform
         }
     "#;
 
     const FRAG_SHADER: &str = r#"#version 330 core
         out vec4 frag_color;
+        
+        in vec3 normal;
+        in vec3 frag_position;
+
+        uniform vec3 light_position;
+        uniform vec3 view_position;
 
         uniform vec3 object_color;
         uniform vec3 light_color;
 
         void main() {
-            frag_color = vec4(light_color * object_color, 1.0);
+            // Ambient
+            float ambient_strength = 0.2;
+            vec3 ambient = ambient_strength * light_color;
+
+            // Diffuse
+            vec3 light_direction = normalize(light_position - frag_position);
+            vec3 norm = normalize(normal);
+            float diff = max(dot(norm, light_direction), 0.0);
+            vec3 diffuse = diff * light_color;
+
+            // Specular
+            float specular_strength = 0.5;
+            vec3 view_dir = normalize(view_position - frag_position);
+            vec3 reflect_dir = reflect(-light_direction, norm);
+
+            float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 4);
+            vec3 specular = specular_strength * spec * light_color;
+
+
+            vec3 result = (ambient + diffuse + specular) * object_color;
+
+            frag_color = vec4(result, 1.0);
         }
     
     "#;
@@ -279,17 +328,41 @@ fn main() {
 
     let object_color = CString::new("object_color").unwrap();
     let light_color = CString::new("light_color").unwrap();
+    let light_position = CString::new("light_position").unwrap();
+    let view_position = CString::new("view_position").unwrap();
 
     let location_object_color =
         unsafe { glGetUniformLocation(program_object, object_color.as_ptr().cast()) };
     let location_light_color =
         unsafe { glGetUniformLocation(program_object, light_color.as_ptr().cast()) };
+    let location_light_position =
+        unsafe { glGetUniformLocation(program_object, light_position.as_ptr().cast()) };
+    let location_view_position =
+        unsafe { glGetUniformLocation(program_object, view_position.as_ptr().cast()) };
+
     assert!(location_object_color >= 0);
     assert!(location_light_color >= 0);
+    assert!(location_light_position >= 0);
+    assert!(location_view_position >= 0);
+
+    let light_position = glam::Vec3::new(-3.0, 1.5, 4.0);
+    let view_position = glam::Vec3::new(-2.0, 2.0, -5.0);
 
     unsafe {
         glUniform3f(location_object_color, 1.0, 0.5, 0.31);
         glUniform3f(location_light_color, 1.0, 1.0, 1.0);
+        glUniform3f(
+            location_light_position,
+            light_position[0],
+            light_position[1],
+            light_position[2],
+        );
+        glUniform3f(
+            location_view_position,
+            view_position[0],
+            view_position[1],
+            view_position[2],
+        );
     }
 
     unsafe {
@@ -322,27 +395,25 @@ fn main() {
                 assert!(location_view >= 0);
                 assert!(location_projection >= 0);
 
-                let position = glam::Vec3::new(-2.0, 1.0, 2.0);
+                let position = glam::Vec3::new(0.0, 0.0, 0.0);
                 let translation = glam::Mat4::from_translation(position);
                 let rotation = glam::Mat4::IDENTITY;
-                let scale = glam::Mat4::IDENTITY * 4.0;
+                let mut scale = glam::Mat4::IDENTITY * 1.0;
+                scale.w_axis = glam::vec4(0.0, 0.0, 0.0, 1.0);
+
                 let model_matrix = translation * rotation * scale;
                 glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
 
                 // CAMERA SETUP
                 let view_matrix = glam::Mat4::look_at_rh(
-                    glam::Vec3::new(0.0, 2.0, -10.0),
+                    view_position,
                     glam::Vec3::new(0.0, 0.0, 0.0),
                     glam::Vec3::new(0.0, 1.0, 0.0),
                 );
                 glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
 
-                let mut projection_matrix = glam::Mat4::perspective_rh_gl(
-                    (45.0f32).to_radians(),
-                    800.0 / 600.0,
-                    0.1,
-                    100.0,
-                );
+                let mut projection_matrix =
+                    glam::Mat4::perspective_rh_gl((45f32).to_radians(), 800.0 / 600.0, 0.1, 100.0);
                 glUniformMatrix4fv(
                     location_projection,
                     1,
@@ -369,27 +440,24 @@ fn main() {
                 assert!(location_view >= 0);
                 assert!(location_projection >= 0);
 
-                let position = glam::Vec3::new(2.0, -1.0, 0.0);
-                let translation = glam::Mat4::from_translation(position);
+                let translation = glam::Mat4::from_translation(light_position);
 
                 let rotation = glam::Mat4::IDENTITY;
-                let scale = glam::Mat4::IDENTITY * 1.0;
+                let mut scale = glam::Mat4::IDENTITY * 1.0;
+                scale.w_axis = glam::vec4(0.0, 0.0, 0.0, 1.0);
+
                 let model_matrix = translation * rotation * scale;
                 glUniformMatrix4fv(location_model, 1, 0, model_matrix.to_cols_array().as_ptr());
                 // CAMERA SETUP
                 let view_matrix = glam::Mat4::look_at_rh(
-                    glam::Vec3::new(0.0, 2.0, -10.0),
+                    view_position,
                     glam::Vec3::new(0.0, 0.0, 0.0),
                     glam::Vec3::new(0.0, 1.0, 0.0),
                 );
                 glUniformMatrix4fv(location_view, 1, 0, view_matrix.to_cols_array().as_ptr());
 
-                let mut projection_matrix = glam::Mat4::perspective_rh_gl(
-                    (45.0f32).to_radians(),
-                    800.0 / 600.0,
-                    0.1,
-                    100.0,
-                );
+                let mut projection_matrix =
+                    glam::Mat4::perspective_rh_gl((45f32).to_radians(), 800.0 / 600.0, 0.1, 100.0);
                 glUniformMatrix4fv(
                     location_projection,
                     1,
